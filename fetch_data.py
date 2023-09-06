@@ -1,3 +1,4 @@
+import os
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 
 # Using Connection String
@@ -14,6 +15,8 @@ BLOB_FILES = [
 blob_service_client = BlobServiceClient.from_connection_string(CONNECTION_STRING)
 container_client = blob_service_client.get_container_client(CONTAINER_NAME)
 
+if "data" not in [a for a in os.listdir() if os.path.isdir(a)]:
+    os.mkdir("data")
 
 for file in BLOB_FILES:
     blob_client = container_client.get_blob_client(file)
