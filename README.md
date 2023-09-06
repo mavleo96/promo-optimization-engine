@@ -1,6 +1,7 @@
 ﻿# promo-optimization_team-simpsons-paradox
 
 Data Dictionary
+
 Datasets:
 
 There are 5 datasets that will be available to the participants:
