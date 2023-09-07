@@ -1,15 +1,17 @@
 import os
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
+from dotenv import load_dotenv
+load_dotenv()
 
 # Using Connection String
-CONNECTION_STRING = "AccountName=abimtmroigbdevstg;AccountKey=Tn9FjqdkLU61muyAeuHIm0Zs5347dxXZfAtUxJqUqqFNGWUXQb80y64Wpyf7QDzbRDmiPupFWn04+AStiE/5wQ==;EndpointSuffix=core.windows.net;DefaultEndpointsProtocol=https;"
+CONNECTION_STRING = os.getenv("CONNECTION_STRING")
 CONTAINER_NAME = "quarterly-results"
 BLOB_FILES = [
     "hackathon-team-simpsons-paradox/brand_segment_mapping_hackathon.xlsx",
     "hackathon-team-simpsons-paradox/macro_data.xlsx",
     "hackathon-team-simpsons-paradox/maximum_discount_constraint_hackathon.xlsx",
     "hackathon-team-simpsons-paradox/sales_data_hackathon_original.xlsx",
-    "hackathon-team-simpsons-paradox/volume_variation_constraint_hackathon.xlsx"
+    "hackathon-team-simpsons-paradox/volume_variation_constraint_hackathon.xlsx",
 ]
 
 blob_service_client = BlobServiceClient.from_connection_string(CONNECTION_STRING)
