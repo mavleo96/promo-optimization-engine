@@ -10,8 +10,11 @@ There are 5 datasets that will be available to the participants:
 -	brand_segment_mapping_hackathon.csv
 -	maximum_discount_constraint_hackathon.xlsx
 -	volume_variation_constraint_hackathon.csv
+
 sales_data.csv:
+
 Contains the historical sales in HL per SKU, brand, pack type and pack size:
+
 Columns:
 -	Year: Historical year of the sale
 -	Month: Historical month of the sale 
@@ -30,7 +33,9 @@ Columns:
 -	VILC_LC: Variable Inventory and Logistics cost of the SKU
 
 macro_data.csv:
+
 Contains the macroeconomic indicators for the market. Data is available at monthly level (certain macroeconomic indicators are refreshed on annual or quarterly).
+
 Columns:
 -	Year: Historical year of the macroeconomic KPI
 -	Month: Historical month of the macroeconomic KPI
@@ -43,24 +48,31 @@ Columns:
 -	GDP: Gross Domestic Product is a monetary measure of the market value of all the final goods and services produced in a specific time-period by a country or countries.
 
 brand_segment_mapping_hackathon.csv:
+
 Contains the mapping between brand and price segment
+
 Columns:
 -	Brand: Name of the brand
 -	PriceSegment: Name of the price segment that the corresponding brand belongs to
 
 maximum_discount_constraint_hackathon.csv:
+
 Contains the maximum discount that can be given when finding the optimal budget. There are three sheets:
+
 Brand – Contains the maximum discount that can be given per brand:
+
 Columns:
 -	Brand: Name of the brand
 -	max_discount: Maximum discount for the corresponding brand
 
 Pack – Contains the maximum discount that can be given per pack type:
+
 Columns:
 -	Pack: Pack type
 -	max_discount: Maximum discount for the corresponding pack
 
 PriceSegment – Contains the maximum discount that can be given per price segment:
+
 Columns:
 -	PriceSegment: Price segment
 -	max_discount: Maximum discount for the corresponding price segment
@@ -68,7 +80,9 @@ Columns:
 
 
 volume_variation_constraint_hackathon.csv
+
 Contains the minimum and maximum variation in volume allowed per month at SKU, Brand, Pack and Size level, when finding the optimal budget
+
 Columns:
 -	SKU: Unique ID of the SKU
 -	Brand: Name of the brand
