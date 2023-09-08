@@ -1,6 +1,7 @@
 import os
 from azure.storage.blob import BlobServiceClient
 import pandas as pd
+import datetime
 
 def fetch_data(CONNECTION_STRING):
     """fetch data from azure blob storage and save to local data folder
@@ -41,6 +42,8 @@ def load_data():
                     .lower()
                     .replace("_lc","")
                     .replace("pricesegment","segment")
+                    .replace("_htls","")
+                    .replace(" ","_")
                 )
                 for k in df.columns]
             dict_key = file_path.split(".")[0] + ("" if sheet_name == "Sheet1" else "_"+sheet_name.lower())
@@ -56,3 +59,14 @@ def load_data():
         df_dict["sales_data_hackathon"],
         df_dict["volume_variation_constraint_hackathon"]
     )
+
+def create_time_index(df_list):
+    """create time index for all dataframes
+    """
+    li = []
+    for df in df_list:
+        df["date"] = df.apply(lambda x: datetime.datetime(int(x["year"]), int(x["month"]), 1), axis=1)
+        df.drop(["year", "month"], axis=1, inplace=True)
+        df.set_index("date", inplace=True)
+        li.append(df)
+    return li
