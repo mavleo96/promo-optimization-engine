@@ -1,0 +1,54 @@
+{
+    "sales_data": [
+        "year",
+        "month",
+        "sku",
+        "brand",
+        "pack",
+        "size",
+        "volume_hl",
+        "gto",
+        "promotional_discount",
+        "other_discount",
+        "total_discount",
+        "excise",
+        "net_revenue",
+        "maco",
+        "vilc"
+    ],
+    "macro_data": [
+        "year",
+        "month",
+        "retail_sales_index",
+        "unemployment_rate",
+        "cpi",
+        "private_consumption",
+        "gross_domestic_saving",
+        "brad_money",
+        "gdp"
+    ],
+    "brand_segment_mapping": [
+        "brand",
+        "price_segment"
+    ],
+    "maximum_brand_discount_constraint": [
+        "brand",
+        "max_discount"
+    ],
+    "maximum_pack_discount_constraint": [
+        "pack",
+        "max_discount"
+    ],
+    "maximum_segment_discount_constraint": [
+        "price_segment",
+        "max_discount"
+    ],
+    "volume_variation_constraint": [
+        "sku",
+        "brand",
+        "pack",
+        "size",
+        "min_volume_variation",
+        "max_volume_variation"
+    ]
+}

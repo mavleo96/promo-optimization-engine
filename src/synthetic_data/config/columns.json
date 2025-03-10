@@ -1,0 +1,132 @@
+{
+    "year": {
+        "group": "time",
+        "desc": "historical year",
+        "type": "int"
+    },
+    "month": {
+        "group": "time",
+        "desc": "historical month",
+        "type": "int"
+    },
+    "sku": {
+        "group": "id",
+        "desc": "unique id of the sku",
+        "type": "str"
+    },
+    "brand": {
+        "group": "id",
+        "desc": "name of the brand",
+        "type": "str"
+    },
+    "price_segment": {
+        "group": "id",
+        "desc": "price segment",
+        "type": "str"
+    },
+    "pack": {
+        "group": "id",
+        "desc": "pack type of the sku",
+        "type": "str"
+    },
+    "size": {
+        "group": "id",
+        "desc": "pack size of the sku",
+        "type": "str"
+    },
+    "volume_hl": {
+        "group": "sales",
+        "desc": "volume sold of the sku in hectoliters",
+        "type": "float"
+    },
+    "gto": {
+        "group": "sales",
+        "desc": "gross turnover of the sku in local currency",
+        "type": "float"
+    },
+    "promotional_discount": {
+        "group": "discount",
+        "desc": "discount given for promotion / promotion budget for the sku in local currency",
+        "type": "float"
+    },
+    "other_discount": {
+        "group": "discount",
+        "desc": "other discounts / budget for the sku in local currency",
+        "type": "float"
+    },
+    "total_discount": {
+        "group": "discount",
+        "desc": "sum of promotional and other discounts",
+        "type": "float"
+    },
+    "excise": {
+        "group": "sales",
+        "desc": "excise taxes levied on the sales of the skus",
+        "type": "float"
+    },
+    "net_revenue": {
+        "group": "sales",
+        "desc": "revenue earned after the deduction of costs (net revenue = gto - total_discount - excise)",
+        "type": "float"
+    },
+    "maco": {
+        "group": "sales",
+        "desc": "marginal contribution of the sku (maco = net revenue - vilc)",
+        "type": "float"
+    },
+    "vilc": {
+        "group": "sales",
+        "desc": "variable inventory and logistics cost of the sku",
+        "type": "float"
+    },
+    "retail_sales_index": {
+        "group": "macro",
+        "desc": "a quarterly measure of the value of goods sold by retailers",
+        "type": "float"
+    },
+    "unemployment_rate": {
+        "group": "macro",
+        "desc": "percentage of people in the labour force who are unemployed",
+        "type": "float"
+    },
+    "cpi": {
+        "group": "macro",
+        "desc": "consumer price index; measure of the average change overtime in the prices paid by urban consumers for a market basket of consumer goods and services",
+        "type": "float"
+    },
+    "private_consumption": {
+        "group": "macro",
+        "desc": "measure of all the money spent by consumers in the country to buy goods and services",
+        "type": "float"
+    },
+    "gross_domestic_saving": {
+        "group": "macro",
+        "desc": "measure of savings of household sector, private corporate sector, and public sector",
+        "type": "float"
+    },
+    "brad_money": {
+        "group": "macro",
+        "desc": "measures of amount of money circulating in an economy",
+        "type": "float"
+    },
+    "gdp": {
+        "group": "macro",
+        "desc": "gross domestic product; monetary measure of the market value of all the final goods and services produced in a specific time-period by a country or countries",
+        "type": "float"
+    },
+    "max_discount": {
+        "group": "constraint",
+        "desc": "maximum discount allowed",
+        "type": "float"
+    },
+    "min_volume_variation": {
+        "group": "constraint",
+        "desc": "minimum allowed change in volume compared to previous month",
+        "type": "float"
+    },
+    "max_volume_variation": {
+        "group": "constraint",
+        "desc": "maximum allowed change in volume compared to previous month",
+        "type": "float"
+    }
+}
