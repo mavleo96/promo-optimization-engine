@@ -23,6 +23,8 @@ def random_data_generator(
         array = np.random.beta(p1, p2, shape) * scale
     elif dist == "normal":
         array = np.random.normal(p1, p2, shape)
+    elif dist == "uniform":
+        array = np.random.uniform(p1, p2, shape)
 
     if sparsity:
         array = np.where(np.random.binomial(1, sparsity, shape), 0, array)

@@ -2,6 +2,8 @@
 This module is used to generate synthetic data
 """
 
+# TODO: Make the data generation more realistic
+
 import os
 import random
 import string
@@ -13,42 +15,42 @@ import pandas as pd
 from pathlib import Path
 from itertools import product
 from typing import Dict, List, Union, Iterable
-
+from .utils import (
+    random_string_list,
+    cross_join_data,
+    random_map_join_data,
+    random_data_generator,
+)
 from .base_generator import BaseSyntheticData
 
 
 class SyntheticData(BaseSyntheticData):
     def __init__(self, path: Union[str, Path]) -> None:
         super().__init__(path)
+        self.generator_dict["sku"] = random_string_list("sku", 1000)
+        self.generator_dict["brand"] = random_string_list("brand", 20)
+        self.generator_dict["pack"] = random_string_list("pack", 5)
+        self.generator_dict["size"] = random_string_list("size", 3)
+        self.generator_dict["price_segment"] = random_string_list("price_segment", 3)
 
     def generate_datasets(self) -> None:
         """Sets the synthetic data based on the configuration"""
 
         self["macro_data"] = self.create_macro_data()
+        self["sales_data"] = self.create_sales_data()
+        self["brand_segment_mapping"] = self.create_brand_segment_mapping()
+        self["maximum_brand_discount_constraint"] = (
+            self.create_brand_discount_constraint()
+        )
+        self["maximum_pack_discount_constraint"] = (
+            self.create_pack_discount_constraint()
+        )
+        self["maximum_segment_discount_constraint"] = (
+            self.create_segment_discount_constraint()
+        )
+        self["volume_variation_constraint"] = self.create_volume_variation_constraint()
 
         super().generate_datasets()
-
-    @staticmethod
-    def random_data_generator(
-        shape: int,
-        p1: float = 1,
-        p2: float = 1,
-        scale: float = 100,
-        dist: str = "beta",
-        sparsity: float = 0,
-    ) -> np.ndarray:
-        """Method to generate random data based on specified distribution
-        Allows for sparsity to be added to the data"""
-
-        if dist == "beta":
-            array = np.random.beta(p1, p2, shape) * scale
-        elif dist == "normal":
-            array = np.random.normal(p1, p2, shape)
-
-        if sparsity:
-            array = np.where(np.random.binomial(1, sparsity, shape), 0, array)
-
-        return array
 
     def create_macro_data(self) -> pd.DataFrame:
 
@@ -138,18 +140,24 @@ class SyntheticData(BaseSyntheticData):
         return df
 
     def create_sales_data(self) -> pd.DataFrame:
-        years = self.generator_dict["year"]
-        months = self.generator_dict["month"]
-        skus = self.generator_dict["sku"]
-        brands = self.generator_dict["brand"]
-        packs = self.generator_dict["pack"]
-        sizes = self.generator_dict["size"]
+
+        df = random_map_join_data(
+            [
+                self.generator_dict["sku"],
+                self.generator_dict["brand"],
+                self.generator_dict["pack"],
+                self.generator_dict["size"],
+            ],
+        )
 
         data = []
 
-        for year in years:
-            for month in months:
-                for i, sku in enumerate(skus):
+        for year in self.generator_dict["year"]:
+            for month in self.generator_dict["month"]:
+                for sku in self.generator_dict["sku"]:
+                    # Retrieve corresponding row with categorical values
+                    row = df[df["sku"] == sku].iloc[0]
+
                     volume_hl = np.random.uniform(
                         10, 500
                     )  # Sales volume in hectoliters
@@ -189,9 +197,9 @@ class SyntheticData(BaseSyntheticData):
                             year,
                             month,
                             sku,
-                            brands[i],
-                            packs[i],
-                            sizes[i],
+                            row["brand"],
+                            row["pack"],
+                            row["size"],
                             volume_hl,
                             gto,
                             promotional_discount,
@@ -204,24 +212,77 @@ class SyntheticData(BaseSyntheticData):
                         ]
                     )
 
-        df = pd.DataFrame(
-            data,
-            columns=[
-                "year",
-                "month",
-                "sku",
-                "brand",
-                "pack",
-                "size",
-                "volume_hl",
-                "gto",
-                "promotional_discount",
-                "other_discount",
-                "total_discount",
-                "excise",
-                "net_revenue",
-                "maco",
-                "vilc",
-            ],
+        # Create a DataFrame from the generated data
+        columns = [
+            "year",
+            "month",
+            "sku",
+            "brand",
+            "pack",
+            "size",
+            "volume_hl",
+            "gto",
+            "promotional_discount",
+            "other_discount",
+            "total_discount",
+            "excise",
+            "net_revenue",
+            "maco",
+            "vilc",
+        ]
+
+        return pd.DataFrame(data, columns=columns)
+
+    def create_brand_segment_mapping(self) -> pd.DataFrame:
+        df = random_map_join_data(
+            [self.generator_dict["brand"], self.generator_dict["price_segment"]],
         )
+        return df
+
+    def create_brand_discount_constraint(self) -> pd.DataFrame:
+
+        df = pd.DataFrame(
+            {
+                "brand": self.generator_dict["brand"],
+                "discount": np.random.uniform(
+                    0.05, 0.3, len(self.generator_dict["brand"])
+                ),
+            }
+        )
+        return df
+
+    def create_pack_discount_constraint(self) -> pd.DataFrame:
+
+        df = pd.DataFrame(
+            {
+                "pack": self.generator_dict["pack"],
+                "discount": np.random.uniform(
+                    0.05, 0.3, len(self.generator_dict["pack"])
+                ),
+            }
+        )
+        return df
+
+    def create_segment_discount_constraint(self) -> pd.DataFrame:
+
+        df = pd.DataFrame(
+            {
+                "price_segment": self.generator_dict["price_segment"],
+                "discount": np.random.uniform(
+                    0.05, 0.3, len(self.generator_dict["price_segment"])
+                ),
+            }
+        )
+        return df
+
+    def create_volume_variation_constraint(self) -> pd.DataFrame:
+
+        df = self["sales_data"][["sku", "brand"]].drop_duplicates()
+        df["min_volume_variation"] = 1 - random_data_generator(
+            df.shape[0], 0, 0.2, dist="uniform"
+        )
+        df["max_volume_variation"] = 1 + random_data_generator(
+            df.shape[0], 0, 0.2, dist="uniform"
+        )
+
         return df
