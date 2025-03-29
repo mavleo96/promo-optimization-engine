@@ -89,7 +89,5 @@ Defines volume variation constraints per SKU for optimal budget calculation.
 |--------|-------------|
 | `sku` | Unique SKU ID |
 | `brand` | Brand name |
-| `pack` | Pack type |
-| `size` | Pack size |
 | `min_volume_variation` | Minimum allowed monthly volume change |
 | `max_volume_variation` | Maximum allowed monthly volume change |

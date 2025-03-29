@@ -46,8 +46,6 @@
     "volume_variation_constraint": [
         "sku",
         "brand",
-        "pack",
-        "size",
         "min_volume_variation",
         "max_volume_variation"
     ]
