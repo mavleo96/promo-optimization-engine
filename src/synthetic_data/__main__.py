@@ -7,10 +7,10 @@ from .generator import SyntheticData
 def main():
     parser = argparse.ArgumentParser(description="Generate synthetic data")
     parser.add_argument(
+        "-p",
         "--path",
         type=str,
-        required=False,
-        default="src/synthetic_data/config",
+        required=True,
         help="Path to the synthetic data config",
     )
     args = parser.parse_args()
