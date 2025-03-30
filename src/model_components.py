@@ -85,4 +85,17 @@ class DiscountLayer(BaseModuleClass):
         return uplift
 
 
+class VolumeConversion(BaseModuleClass):
+    def __init__(self, n_brands: int):
+        super(VolumeConversion, self).__init__()
+        assert n_brands > 0, "Number of brands must be positive"
+
+        self.slope = self.create_var((1, n_brands))
+        self.intercept = self.create_var((1, n_brands))
+
+    def forward(self, nr: torch.Tensor) -> torch.Tensor:
+        volume = self.slope * nr + self.intercept
+        return volume
+
+
 # Add ROI Mults layers
