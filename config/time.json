@@ -1,4 +1,18 @@
 {
-    "start_year": 2018,
-    "end_year": 2024
+    "start" :{
+        "year": 2018,
+        "month": 1
+    },
+    "end" :{
+        "year": 2024,
+        "month": 12
+    },
+    "covid_start" :{
+        "year": 2020,
+        "month": 3
+    },
+    "covid_end" :{
+        "year": 2020,
+        "month": 5
+    }
 }

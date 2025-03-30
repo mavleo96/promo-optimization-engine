@@ -43,12 +43,13 @@ class BaseSyntheticData(dict):
             if col == "year":
                 generator_dict[col] = pd.Series(
                     np.arange(
-                        self.time_config["start_year"],
-                        self.time_config["end_year"] + 1,
+                        self.time_config["start"]["year"],
+                        self.time_config["end"]["year"] + 1,
                     ),
                     name=col,
                 )
             elif col == "month":
+                # TODO: clip start and end months from config for start and end years
                 generator_dict[col] = pd.Series(np.arange(1, 13), name=col)
             elif col_config["type"] == "str":
                 generator_dict[col] = random_string_list(

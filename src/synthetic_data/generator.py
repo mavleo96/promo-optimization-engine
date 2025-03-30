@@ -81,7 +81,16 @@ class SyntheticData(BaseSyntheticData):
                 gdp = base_gdp * (1 + 0.02 * np.random.randn())
 
                 # Introduce COVID-19 effects (2020-2021)
-                if 2020 <= year <= 2021:
+                if (
+                    self.time_config["covid_start"]["year"]
+                    <= year
+                    <= self.time_config["covid_end"]["year"]
+                ) and (
+                    self.time_config["covid_start"]["month"]
+                    <= month
+                    <= self.time_config["covid_end"]["month"]
+                ):
+                    # Adjust macroeconomic indicators
                     retail_sales *= np.random.uniform(0.7, 0.9)  # Drop in sales
                     unemployment_rate *= np.random.uniform(
                         1.2, 1.5
