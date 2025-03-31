@@ -184,7 +184,15 @@ class SyntheticData(BaseSyntheticData):
                     )  # Variable indirect logistic cost
 
                     # Introduce COVID-19 effects (2020-2021)
-                    if 2020 <= year <= 2021:
+                    if (
+                        self.time_config["covid_start"]["year"]
+                        <= year
+                        <= self.time_config["covid_end"]["year"]
+                    ) and (
+                        self.time_config["covid_start"]["month"]
+                        <= month
+                        <= self.time_config["covid_end"]["month"]
+                    ):
                         volume_hl *= np.random.uniform(0.6, 0.8)  # Drop in sales volume
                         gto *= np.random.uniform(
                             0.6, 0.8
