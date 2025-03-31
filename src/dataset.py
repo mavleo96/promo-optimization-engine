@@ -12,6 +12,11 @@ class Dataset:
         self.load()
 
         self.encodings = self.create_encodings()
+
+        self.n_sku = len(self.encodings["label_dict"]["sku"])
+        self.n_macro = len(self.encodings["label_dict"]["macro"])
+        self.n_discount_type = len(self.encodings["label_dict"]["discount"])
+
         self.sales_index = self.encodings["sales_index"]
         self.sku_list = self.encodings["label_dict"]["sku"]
 
@@ -51,7 +56,6 @@ class Dataset:
 
         def label_encoder(series):
             unique_values = series.sort_values().unique()
-            unique_count = series.nunique()
             return dict(zip(unique_values, range(len(unique_values))))
 
         def mapper(col_val, col_key="sku"):
@@ -121,6 +125,8 @@ class Dataset:
             .swaplevel(0, 1, axis=1)
             .sort_index(axis=1)
         )
+        self.base_init = self.nr_data.mean(axis=0)
+        self.time_index = np.arange(len(self.sales_index)).reshape(-1, 1)
 
     def process_macro_data(self) -> None:
         self.macro_data = self.raw_macro_data.copy(deep=True)
@@ -142,12 +148,15 @@ class Dataset:
 
         self.nr = (self.nr_data / self.scaler).values
         self.nr_lag = (self.nr_lag_data / self.scaler).values
-        self.volume = (self.volume_data / self.vol_scaler).values
-        self.discount = (self.discount_data / self.scaler).values
-        self.macro = (self.macro_data / self.macro_scaler - 1).values
-
         self.nr_lag = np.expand_dims(self.nr_lag, 1)
+        self.base_init = (self.base_init / self.scaler).values
+        self.base_init = np.expand_dims(self.base_init, 0)
+
+        self.volume = (self.volume_data / self.vol_scaler).values
+        self.macro = (self.macro_data / self.macro_scaler - 1).values
         self.macro = np.expand_dims(self.macro, 1)
+
+        self.discount = (self.discount_data / self.scaler).values
         self.discount = self.discount.reshape(
             len(self.sales_index), len(self.sku_list), -1
         )
