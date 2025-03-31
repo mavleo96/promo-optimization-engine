@@ -57,45 +57,62 @@ class BaseModuleClass(nn.Module):
 
 
 class BaselineLayer(BaseModuleClass):
-    def __init__(self, n_brands: int, baseline_init: np.ndarray):
+    def __init__(self, hier_shape: int, baseline_init: NDArray):
         super(BaselineLayer, self).__init__()
-        assert n_brands > 0, "Number of brands must be positive"
-        assert baseline_init.shape == (1, n_brands), "Baseline init shape mismatch"
+        assert hier_shape > 0, "Hierarchy shape must be positive"
+        assert baseline_init.shape == (1, hier_shape), "Baseline init shape mismatch"
 
-        self.baseline_intercept = self.create_var((1, n_brands), init=baseline_init)
-        self.baseline_weight1 = self.create_hier_var((1, n_brands), 1)
-        self.baseline_weight2 = self.create_hier_var((1, n_brands), 1)
+        self.base_index_rate = 0.001
+        self.start_ratio = 0.3
+
+        self.baseline_intercept = self.create_var(
+            (1, hier_shape), init=self.start_ratio * baseline_init, activation="sigmoid"
+        )
+        self.baseline_weight1 = self.create_hier_var(
+            (1, hier_shape), 1, activation="tanh"
+        )
+        self.baseline_weight2 = self.create_hier_var(
+            (1, hier_shape), 1, activation="tanh"
+        )
 
     def forward(self, time_index: torch.Tensor, nr_lag: torch.Tensor) -> torch.Tensor:
         # Calculate the baseline using the linear equation
         baseline = (
             self.baseline_intercept
-            + self.baseline_weight1 * time_index
+            + self.baseline_weight1 * (time_index * self.base_index_rate)
             + self.baseline_weight2 * nr_lag
         )
         return baseline
 
 
 class MixedEffectLayer(BaseModuleClass):
-    def __init__(self, n_brands: int, n_macro: int):
+    def __init__(self, hier_shape: int, n_macro: int):
         super(MixedEffectLayer, self).__init__()
-        assert n_brands > 0, "Number of brands must be positive"
+        assert hier_shape > 0, "Hierarchy shape must be positive"
         assert n_macro > 0, "Number of macro variables must be positive"
 
-        self.me_mult = self.create_hier_var((1, n_brands, n_macro), 1)
+        self.me_mult_param = self.create_hier_var(
+            (1, hier_shape, n_macro), 1, activation="tanh"
+        )
+        self.roi_mult_param = self.create_hier_var(
+            (1, hier_shape, n_macro), 1, activation="tanh"
+        )
 
-    def forward(self, macro: torch.Tensor) -> torch.Tensor:
-        mixed_effect = 1 + F.tanh(self.me_mult * macro)
-        return mixed_effect
+    def forward(self, macro: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        mixed_effect = 1 + F.tanh(self.me_mult_param * macro)
+        roi_mult = 1 + F.tanh(self.roi_mult_param * mixed_effect)
+        return mixed_effect, roi_mult
 
 
 class DiscountLayer(BaseModuleClass):
-    def __init__(self, n_brands: int, n_types: int):
+    def __init__(self, hier_shape: int, n_types: int):
         super(DiscountLayer, self).__init__()
-        assert n_brands > 0, "Number of brands must be positive"
+        assert hier_shape > 0, "Hierarchy shape must be positive"
         assert n_types > 0, "Number of types must be positive"
 
-        self.slope = self.create_hier_var((1, n_brands, n_types), 1)
+        self.slope = self.create_hier_var(
+            (1, hier_shape, n_types), 1, activation="sigmoid"
+        )
 
     def forward(self, discount: torch.Tensor) -> torch.Tensor:
         uplift = self.slope * discount
@@ -103,16 +120,13 @@ class DiscountLayer(BaseModuleClass):
 
 
 class VolumeConversion(BaseModuleClass):
-    def __init__(self, n_brands: int):
+    def __init__(self, hier_shape: int):
         super(VolumeConversion, self).__init__()
-        assert n_brands > 0, "Number of brands must be positive"
+        assert hier_shape > 0, "Hierarchy shape must be positive"
 
-        self.slope = self.create_var((1, n_brands))
-        self.intercept = self.create_var((1, n_brands))
+        self.slope = self.create_var((1, hier_shape), activation="sigmoid")
+        self.intercept = self.create_var((1, hier_shape), activation="tanh")
 
     def forward(self, nr: torch.Tensor) -> torch.Tensor:
         volume = self.slope * nr + self.intercept
         return volume
-
-
-# Add ROI Mults layers
