@@ -10,7 +10,7 @@ def main():
     parser.add_argument("--device", type=str, default="cpu")
     args = parser.parse_args()
 
-    data = Dataset(args.data_path, device=args.device)
+    data = Dataset(args.data_path)
     train_loader, val_loader = data.train_test_split()
 
     model = HierarchicalRegressionModel(data)

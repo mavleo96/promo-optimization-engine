@@ -168,13 +168,13 @@ class Dataset:
     def create_tensors(self) -> TensorDataset:
         # Create a tensor dataset
         dataset = TensorDataset(
-            torch.tensor(self.nr, dtype=torch.float32, device=self.device),
-            torch.tensor(self.volume, dtype=torch.float32, device=self.device),
-            torch.tensor(self.mask, dtype=torch.bool, device=self.device),
-            torch.tensor(self.time_index, dtype=torch.float32, device=self.device),
-            torch.tensor(self.nr_lag, dtype=torch.float32, device=self.device),
-            torch.tensor(self.macro, dtype=torch.float32, device=self.device),
-            torch.tensor(self.discount, dtype=torch.float32, device=self.device),
+            torch.tensor(self.nr, dtype=torch.float32, device="cpu"),
+            torch.tensor(self.volume, dtype=torch.float32, device="cpu"),
+            torch.tensor(self.mask, dtype=torch.bool, device="cpu"),
+            torch.tensor(self.time_index, dtype=torch.float32, device="cpu"),
+            torch.tensor(self.nr_lag, dtype=torch.float32, device="cpu"),
+            torch.tensor(self.macro, dtype=torch.float32, device="cpu"),
+            torch.tensor(self.discount, dtype=torch.float32, device="cpu"),
         )
         return dataset
 
