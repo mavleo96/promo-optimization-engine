@@ -4,24 +4,29 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from typing import Tuple, Union
+from numpy.typing import NDArray
 
 
 class BaseModuleClass(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
-        self.global_var_list = []
+        super(BaseModuleClass, self).__init__(*args, **kwargs)
         self.hier_var_list = []
-        super().__init__(*args, **kwargs)
+        # self.global_var_list = []
 
     def create_hier_var(
-        self, shape: Tuple, hier_dim: int, dtype: torch.dtype = torch.float64
+        self,
+        shape: Tuple,
+        hier_dim: int,
+        activation: str = "tanh",
+        dtype: torch.dtype = torch.float32,
     ) -> torch.Tensor:
         assert 0 < hier_dim < len(shape)
         global_shape = (*shape[:hier_dim], 1, *shape[hier_dim + 1 :])
 
-        global_var = torch.zeros(global_shape, requires_grad=True, dtype=dtype)
-        hier_var = torch.zeros(shape, requires_grad=True, dtype=dtype)
+        global_var = self.create_var(global_shape, dtype=dtype, activation=activation)
+        hier_var = self.create_var(shape, dtype=dtype, activation=activation)
 
-        self.global_var_list.append(global_var)
+        # self.global_var_list.append(global_var)
         self.hier_var_list.append(hier_var)
 
         return global_var + hier_var
@@ -29,14 +34,26 @@ class BaseModuleClass(nn.Module):
     def create_var(
         self,
         shape: Tuple,
-        dtype: torch.dtype = torch.float64,
-        init: Union[np.ndarray, None] = None,
+        activation: str = "tanh",
+        dtype: torch.dtype = torch.float32,
+        init: Union[NDArray, None] = None,
     ) -> torch.Tensor:
         if init is None:
-            var = torch.zeros(shape, requires_grad=True, dtype=dtype)
+            # TODO: need to register as parameter
+            # TODO: check why this is float64 instead of float32
+            var = nn.Parameter(
+                torch.randn(shape, dtype=dtype, device="cpu"), requires_grad=True
+            )
         else:
-            var = torch.tensor(init, requires_grad=True, dtype=dtype)
-        return var
+            var = nn.Parameter(
+                torch.tensor(init, dtype=dtype, device="cpu"), requires_grad=True
+            )
+        if activation == "tanh":
+            return F.tanh(var)
+        elif activation == "sigmoid":
+            return F.sigmoid(var)
+        else:
+            return var
 
 
 class BaselineLayer(BaseModuleClass):
