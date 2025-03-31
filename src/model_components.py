@@ -9,7 +9,7 @@ from numpy.typing import NDArray
 
 class BaseModuleClass(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
-        super(BaseModuleClass, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.hier_var_list = []
         # self.global_var_list = []
 
@@ -58,7 +58,7 @@ class BaseModuleClass(nn.Module):
 
 class BaselineLayer(BaseModuleClass):
     def __init__(self, hier_shape: int, baseline_init: NDArray):
-        super(BaselineLayer, self).__init__()
+        super().__init__()
         assert hier_shape > 0, "Hierarchy shape must be positive"
         assert baseline_init.shape == (1, hier_shape), "Baseline init shape mismatch"
 
@@ -87,7 +87,7 @@ class BaselineLayer(BaseModuleClass):
 
 class MixedEffectLayer(BaseModuleClass):
     def __init__(self, hier_shape: int, n_macro: int):
-        super(MixedEffectLayer, self).__init__()
+        super().__init__()
         assert hier_shape > 0, "Hierarchy shape must be positive"
         assert n_macro > 0, "Number of macro variables must be positive"
 
@@ -106,7 +106,7 @@ class MixedEffectLayer(BaseModuleClass):
 
 class DiscountLayer(BaseModuleClass):
     def __init__(self, hier_shape: int, n_types: int):
-        super(DiscountLayer, self).__init__()
+        super().__init__()
         assert hier_shape > 0, "Hierarchy shape must be positive"
         assert n_types > 0, "Number of types must be positive"
 
@@ -121,7 +121,7 @@ class DiscountLayer(BaseModuleClass):
 
 class VolumeConversion(BaseModuleClass):
     def __init__(self, hier_shape: int):
-        super(VolumeConversion, self).__init__()
+        super().__init__()
         assert hier_shape > 0, "Hierarchy shape must be positive"
 
         self.slope = self.create_var((1, hier_shape), activation="sigmoid")

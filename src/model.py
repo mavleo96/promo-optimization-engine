@@ -16,7 +16,7 @@ from src.model_components import (
 class HierarchicalRegressionModel(L.LightningModule):
     def __init__(self, dataset: Dataset, *args, **kwargs):
         # can pass encodings instead of dataset obj
-        super(HierarchicalRegressionModel, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.n_sku = dataset.n_sku
         self.n_macro = dataset.n_macro
         self.n_discount_type = dataset.n_discount_type
