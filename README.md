@@ -2,7 +2,7 @@
 ### ABInBev Hackathon
 ### Team - Simpson's Paradox
 
+Generate synthetic data for demo/testing
 ```shell
-# Generate synthetic data for demo/testing
 python -m src.synthetic_data --path config
 ```
