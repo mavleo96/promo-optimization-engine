@@ -4,7 +4,8 @@ import string
 import pandas as pd
 import numpy as np
 
-from typing import List, Union
+from typing import List, Union, Sequence
+from numpy.typing import NDArray
 
 
 def random_data_generator(
@@ -15,7 +16,7 @@ def random_data_generator(
     dist: str = "beta",
     sparsity: float = 0,
     round: Union[int, None] = None,
-) -> np.ndarray:
+) -> NDArray:
     """Method to generate random data based on specified distribution
     Allows for sparsity to be added to the data"""
 
@@ -42,7 +43,7 @@ def random_string_list(name: str, n: int = 2) -> pd.Series:
     )
 
 
-def cross_join_data(dlist: List[Union[pd.Series, pd.DataFrame]]) -> pd.DataFrame:
+def cross_join_data(dlist: Sequence[Union[pd.Series, pd.DataFrame]]) -> pd.DataFrame:
     """Method to cross join multiple dataframes/series"""
 
     a = dlist[0]
@@ -53,7 +54,9 @@ def cross_join_data(dlist: List[Union[pd.Series, pd.DataFrame]]) -> pd.DataFrame
     return a
 
 
-def random_map_join_data(dlist: List[Union[pd.Series, pd.DataFrame]]) -> pd.DataFrame:
+def random_map_join_data(
+    dlist: Sequence[Union[pd.Series, pd.DataFrame]],
+) -> pd.DataFrame:
     """Method to join multiple dataframes/series based on the first element using dummy mapping"""
 
     return pd.concat(
