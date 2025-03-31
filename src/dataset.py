@@ -1,9 +1,11 @@
 import pandas as pd
 import numpy as np
+import torch
 
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Union
+from torch.utils.data import TensorDataset, DataLoader
+from typing import Dict, Union, Tuple
 
 
 class Dataset:
@@ -24,6 +26,8 @@ class Dataset:
         self.process_sales_data()
         self.process_macro_data()
         self.normalize_data()
+
+        self.tensor_dataset = self.create_tensors()
 
     def load(self) -> None:
         self.raw_sales_data = self.read_csv("sales_data")
@@ -114,7 +118,7 @@ class Dataset:
             .shift(1)
             .clip(lower=0)
             .bfill()
-            .sum(axis=1)
+            .mean(axis=1)
             # TODO: resolve overloading
         )
         self.mask = (self.nr_data >= 0.0).values
@@ -161,9 +165,30 @@ class Dataset:
             len(self.sales_index), len(self.sku_list), -1
         )
 
-    def train_test_split(self) -> None:
-        # 3 fold temporal cross validation
-        pass
+    def create_tensors(self) -> TensorDataset:
+        # Create a tensor dataset
+        dataset = TensorDataset(
+            torch.tensor(self.nr, dtype=torch.float32, device=self.device),
+            torch.tensor(self.volume, dtype=torch.float32, device=self.device),
+            torch.tensor(self.mask, dtype=torch.bool, device=self.device),
+            torch.tensor(self.time_index, dtype=torch.float32, device=self.device),
+            torch.tensor(self.nr_lag, dtype=torch.float32, device=self.device),
+            torch.tensor(self.macro, dtype=torch.float32, device=self.device),
+            torch.tensor(self.discount, dtype=torch.float32, device=self.device),
+        )
+        return dataset
 
+    def train_test_split(
+        self, train_size: float = 0.75
+    ) -> Tuple[DataLoader, DataLoader]:
+        # 3 fold temporal cross validation needed?
+        # create dataloaders
+        train_size = int(train_size * len(self.tensor_dataset))
 
-# Should this become a tensor dataset?
+        train_dataset = TensorDataset(*self.tensor_dataset[:train_size])
+        val_dataset = TensorDataset(*self.tensor_dataset[train_size:])
+
+        train_loader = DataLoader(train_dataset, batch_size=100, shuffle=True)
+        val_loader = DataLoader(val_dataset, batch_size=100, shuffle=False)
+
+        return train_loader, val_loader
