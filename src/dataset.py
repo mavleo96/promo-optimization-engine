@@ -168,18 +168,18 @@ class Dataset:
     def create_tensors(self) -> TensorDataset:
         # Create a tensor dataset
         dataset = TensorDataset(
-            torch.tensor(self.nr, dtype=torch.float32, device="cpu"),
-            torch.tensor(self.volume, dtype=torch.float32, device="cpu"),
-            torch.tensor(self.mask, dtype=torch.bool, device="cpu"),
-            torch.tensor(self.time_index, dtype=torch.float32, device="cpu"),
-            torch.tensor(self.nr_lag, dtype=torch.float32, device="cpu"),
-            torch.tensor(self.macro, dtype=torch.float32, device="cpu"),
-            torch.tensor(self.discount, dtype=torch.float32, device="cpu"),
+            torch.tensor(self.nr, dtype=torch.float32),
+            torch.tensor(self.volume, dtype=torch.float32),
+            torch.tensor(self.mask, dtype=torch.bool),
+            torch.tensor(self.time_index, dtype=torch.float32),
+            torch.tensor(self.nr_lag, dtype=torch.float32),
+            torch.tensor(self.macro, dtype=torch.float32),
+            torch.tensor(self.discount, dtype=torch.float32),
         )
         return dataset
 
     def train_test_split(
-        self, train_size: float = 0.75
+        self, train_size: float = 0.75, batch_size: int = 100, *args, **kwargs
     ) -> Tuple[DataLoader, DataLoader]:
         # 3 fold temporal cross validation needed?
         # create dataloaders
@@ -188,7 +188,11 @@ class Dataset:
         train_dataset = TensorDataset(*self.tensor_dataset[:train_size])
         val_dataset = TensorDataset(*self.tensor_dataset[train_size:])
 
-        train_loader = DataLoader(train_dataset, batch_size=100, shuffle=True)
-        val_loader = DataLoader(val_dataset, batch_size=100, shuffle=False)
+        train_loader = DataLoader(
+            train_dataset, batch_size=batch_size, shuffle=True, *args, **kwargs
+        )
+        val_loader = DataLoader(
+            val_dataset, batch_size=batch_size, shuffle=False, *args, **kwargs
+        )
 
         return train_loader, val_loader
