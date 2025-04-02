@@ -1,10 +1,14 @@
+from typing import Tuple
+
 import lightning as L
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim import Adam
+from torch.utils.data import TensorDataset
 
 from src.dataset import Dataset
+from src.loss import HierarchicalLoss
 from src.model_components import (BaselineLayer, DiscountLayer,
                                   MixedEffectLayer, VolumeConversion)
 
@@ -28,16 +32,21 @@ class HierarchicalRegressionModel(L.LightningModule):
         )
         self.convert_to_volume = VolumeConversion(hier_shape=self.n_sku)
 
-        self.hier_var_list = [
-            *self.baseline_layer.hier_var_list,
-            *self.me_layer.hier_var_list,
-            *self.discount_layer.hier_var_list,
+        self.global_params = [
+            *self.baseline_layer.global_params,
+            *self.me_layer.global_params,
+            *self.discount_layer.global_params,
+            *self.convert_to_volume.global_params,
         ]
-        self.loss_fn = nn.MSELoss()
-        # self.l2_reg = nn.L1Loss()
+        self.hier_params = [
+            *self.baseline_layer.hier_params,
+            *self.me_layer.hier_params,
+            *self.discount_layer.hier_params,
+            *self.convert_to_volume.hier_params,
+        ]
+        self.loss_fn = HierarchicalLoss()
 
-    def forward(self, x):
-        # TODO: assert x on shapes
+    def forward(self, x: TensorDataset) -> Tuple[torch.Tensor, torch.Tensor]:
         _, _, _, time_index, nr_lag, macro, discount = x
 
         # Use layers from ModuleList
@@ -52,30 +61,30 @@ class HierarchicalRegressionModel(L.LightningModule):
 
         return nr_pred, volume_pred
 
-    # Define the training loop
-    def training_step(self, batch, batch_idx):
-
-        y, y_vol, mask, time_index, nr_lag, macro, discount = batch
+    def training_step(self, batch: TensorDataset) -> torch.Tensor:
+        y, y_vol, mask, _, _, _, _ = batch
         y_hat, y_vol_hat = self(batch)
-        mse_loss = self.loss_fn(y_hat, y) + self.loss_fn(y_vol_hat, y_vol)
-        hier_reg = 0.01 * sum(torch.sum(i**2) for i in self.hier_var_list)
-        loss = mse_loss + hier_reg
-        self.log("mse_loss", mse_loss)
-        self.log("hier_reg", hier_reg)
-        self.log("train_loss", loss)  # Logging
+        loss, loss_components = self.loss_fn(
+            y_hat, y, y_vol_hat, y_vol, mask, self.hier_params, self.global_params
+        )
+
+        # Log all loss components with 'train_' prefix
+        for name, value in loss_components.items():
+            self.log(f"train_{name}", value)
         return loss
 
-    # Validation loop
-    def validation_step(self, batch, batch_idx):
-        y, y_vol, mask, time_index, nr_lag, macro, discount = batch
+    def validation_step(self, batch: TensorDataset) -> torch.Tensor:
+        y, y_vol, mask, _, _, _, _ = batch
         y_hat, y_vol_hat = self(batch)
-        mse_loss = self.loss_fn(y_hat, y) + self.loss_fn(y_vol_hat, y_vol)
-        hier_reg = 0  # 0.01 * sum(torch.sum(i**2) for i in self.hier_var_list)
-        loss = mse_loss + hier_reg
-        self.log("val_loss", loss)  # Logging
+        loss, loss_components = self.loss_fn(
+            y_hat, y, y_vol_hat, y_vol, mask, self.hier_params, self.global_params
+        )
+
+        # Log all loss components with 'val_' prefix
+        for name, value in loss_components.items():
+            self.log(f"val_{name}", value)
         return loss
 
-    # Optimizer setup
-    def configure_optimizers(self):
+    def configure_optimizers(self) -> torch.optim.Optimizer:
         optimizer = Adam(self.parameters(), lr=0.01)
         return optimizer
