@@ -1,6 +1,7 @@
-import sys
 import argparse
+import sys
 from pathlib import Path
+
 from .generator import SyntheticData
 
 

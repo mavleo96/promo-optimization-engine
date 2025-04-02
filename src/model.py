@@ -1,16 +1,12 @@
+import lightning as L
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import lightning as L
-
 from torch.optim import Adam
+
 from src.dataset import Dataset
-from src.model_components import (
-    BaselineLayer,
-    MixedEffectLayer,
-    DiscountLayer,
-    VolumeConversion,
-)
+from src.model_components import (BaselineLayer, DiscountLayer,
+                                  MixedEffectLayer, VolumeConversion)
 
 
 class HierarchicalRegressionModel(L.LightningModule):
@@ -74,7 +70,7 @@ class HierarchicalRegressionModel(L.LightningModule):
         y, y_vol, mask, time_index, nr_lag, macro, discount = batch
         y_hat, y_vol_hat = self(batch)
         mse_loss = self.loss_fn(y_hat, y) + self.loss_fn(y_vol_hat, y_vol)
-        hier_reg = 0.01 * sum(torch.sum(i**2) for i in self.hier_var_list)
+        hier_reg = 0  # 0.01 * sum(torch.sum(i**2) for i in self.hier_var_list)
         loss = mse_loss + hier_reg
         self.log("val_loss", loss)  # Logging
         return loss

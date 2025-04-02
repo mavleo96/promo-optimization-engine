@@ -1,10 +1,9 @@
 import random
 import string
+from typing import List, Sequence, Union
 
-import pandas as pd
 import numpy as np
-
-from typing import List, Union, Sequence
+import pandas as pd
 from numpy.typing import NDArray
 
 

@@ -4,24 +4,15 @@ This module is used to generate synthetic data
 
 # TODO: Make the data generation more realistic
 
-import os
-import random
-import string
-import json
+from pathlib import Path
+from typing import Union
 
 import numpy as np
 import pandas as pd
 
-from pathlib import Path
-from itertools import product
-from typing import Dict, List, Union, Iterable
-from .utils import (
-    random_string_list,
-    cross_join_data,
-    random_map_join_data,
-    random_data_generator,
-)
 from .base_generator import BaseSyntheticData
+from .utils import (random_data_generator, random_map_join_data,
+                    random_string_list)
 
 
 class SyntheticData(BaseSyntheticData):

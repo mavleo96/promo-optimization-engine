@@ -2,21 +2,15 @@
 This module is used to generate synthetic data
 """
 
-import os
-import random
-import string
 import json
+import os
+from pathlib import Path
+from typing import Dict, Union
 
 import numpy as np
 import pandas as pd
 
-from pathlib import Path
-from typing import Dict, Union
-from .utils import (
-    random_string_list,
-    cross_join_data,
-    random_data_generator,
-)
+from .utils import cross_join_data, random_data_generator, random_string_list
 
 
 class BaseSyntheticData(dict):

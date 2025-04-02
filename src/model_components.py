@@ -1,9 +1,9 @@
-import torch
+from typing import Dict, Tuple, Union
+
 import numpy as np
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-from typing import Tuple, Union
 from numpy.typing import NDArray
 
 
