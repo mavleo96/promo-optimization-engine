@@ -1,62 +1,19 @@
-from typing import Dict, Tuple, Union
+from typing import Tuple
 
-import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from numpy.typing import NDArray
 
-
-class BaseModuleClass(nn.Module):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.hier_var_list = []
-        # self.global_var_list = []
-
-    def create_hier_var(
-        self,
-        shape: Tuple,
-        hier_dim: int,
-        activation: str = "tanh",
-        dtype: torch.dtype = torch.float32,
-    ) -> torch.Tensor:
-        assert 0 < hier_dim < len(shape)
-        global_shape = (*shape[:hier_dim], 1, *shape[hier_dim + 1 :])
-
-        global_var = self.create_var(global_shape, dtype=dtype, activation=activation)
-        hier_var = self.create_var(shape, dtype=dtype, activation=activation)
-
-        # self.global_var_list.append(global_var)
-        self.hier_var_list.append(hier_var)
-
-        return global_var + hier_var
-
-    def create_var(
-        self,
-        shape: Tuple,
-        activation: str = "tanh",
-        dtype: torch.dtype = torch.float32,
-        init: Union[NDArray, None] = None,
-    ) -> torch.Tensor:
-        if init is None:
-            # TODO: need to register as parameter
-            # TODO: check why this is float64 instead of float32
-            var = nn.Parameter(
-                torch.randn(shape, dtype=dtype, device="cpu"), requires_grad=True
-            )
-        else:
-            var = nn.Parameter(
-                torch.tensor(init, dtype=dtype, device="cpu"), requires_grad=True
-            )
-        if activation == "tanh":
-            return F.tanh(var)
-        elif activation == "sigmoid":
-            return F.sigmoid(var)
-        else:
-            return var
+from src.base_module import BaseModuleClass
 
 
 class BaselineLayer(BaseModuleClass):
+    """
+    Baseline layer of the model.
+
+    This layer is responsible for calculating the baseline sales value.
+    """
+
     def __init__(self, hier_shape: int, baseline_init: NDArray):
         super().__init__()
         assert hier_shape > 0, "Hierarchy shape must be positive"
@@ -68,65 +25,123 @@ class BaselineLayer(BaseModuleClass):
         self.baseline_intercept = self.create_var(
             (1, hier_shape), init=self.start_ratio * baseline_init, activation="sigmoid"
         )
-        self.baseline_weight1 = self.create_hier_var(
+        self.baseline_weight1, self.baseline_weight1_hier = self.create_hier_var(
             (1, hier_shape), 1, activation="tanh"
         )
-        self.baseline_weight2 = self.create_hier_var(
+        self.baseline_weight2, self.baseline_weight2_hier = self.create_hier_var(
             (1, hier_shape), 1, activation="tanh"
         )
 
     def forward(self, time_index: torch.Tensor, nr_lag: torch.Tensor) -> torch.Tensor:
         # Calculate the baseline using the linear equation
+
+        # Baseline sales is defined as a linear function of time and nr_lag
+        # Baseline = intercept + slope1 * time_index + slope2 * nr_lag
         baseline = (
-            self.baseline_intercept
-            + self.baseline_weight1 * (time_index * self.base_index_rate)
-            + self.baseline_weight2 * nr_lag
+            self.baseline_intercept.apply_activation()
+            + (
+                self.baseline_weight1.apply_activation()
+                + self.baseline_weight1_hier.apply_activation()
+            )
+            * (time_index * self.base_index_rate)
+            + (
+                self.baseline_weight2.apply_activation()
+                + self.baseline_weight2_hier.apply_activation()
+            )
+            * nr_lag
         )
         return baseline
 
 
 class MixedEffectLayer(BaseModuleClass):
+    """
+    Mixed effect layer of the model.
+
+    This layer is responsible for calculating the mixed effect / perturbation
+    to the baseline sales value and the ROI multiplier / perturbation to the
+    discount uplift.
+    """
+
     def __init__(self, hier_shape: int, n_macro: int):
         super().__init__()
         assert hier_shape > 0, "Hierarchy shape must be positive"
         assert n_macro > 0, "Number of macro variables must be positive"
 
-        self.me_mult_param = self.create_hier_var(
+        self.me_mult_param, self.me_mult_param_hier = self.create_hier_var(
             (1, hier_shape, n_macro), 1, activation="tanh"
         )
-        self.roi_mult_param = self.create_hier_var(
+        self.roi_mult_param, self.roi_mult_param_hier = self.create_hier_var(
             (1, hier_shape, n_macro), 1, activation="tanh"
         )
 
     def forward(self, macro: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        mixed_effect = 1 + F.tanh(self.me_mult_param * macro)
-        roi_mult = 1 + F.tanh(self.roi_mult_param * mixed_effect)
+
+        # Mixed effect is defined as a non-linear function of the macro variables
+        # ME = 1 + tanh(param * variable)
+        mixed_effect = 1 + F.tanh(
+            (
+                self.me_mult_param.apply_activation()
+                + self.me_mult_param_hier.apply_activation()
+            )
+            * macro
+        )
+        roi_mult = 1 + F.tanh(
+            (
+                self.roi_mult_param.apply_activation()
+                + self.roi_mult_param_hier.apply_activation()
+            )
+            * mixed_effect
+        )
         return mixed_effect, roi_mult
 
 
 class DiscountLayer(BaseModuleClass):
+    """
+    Discount layer of the model.
+
+    This layer is responsible for calculating the discount uplift.
+    """
+
     def __init__(self, hier_shape: int, n_types: int):
         super().__init__()
         assert hier_shape > 0, "Hierarchy shape must be positive"
         assert n_types > 0, "Number of types must be positive"
 
-        self.slope = self.create_hier_var(
+        self.slope, self.slope_hier = self.create_hier_var(
             (1, hier_shape, n_types), 1, activation="sigmoid"
         )
 
     def forward(self, discount: torch.Tensor) -> torch.Tensor:
-        uplift = self.slope * discount
+        # Discount uplift is defined as a linear function of the discount
+        uplift = (
+            self.slope.apply_activation() + self.slope_hier.apply_activation()
+        ) * discount
         return uplift
 
 
 class VolumeConversion(BaseModuleClass):
+    """
+    Volume conversion layer of the model.
+
+    This layer is responsible for converting the net revenue to volume.
+    """
+
     def __init__(self, hier_shape: int):
         super().__init__()
         assert hier_shape > 0, "Hierarchy shape must be positive"
 
-        self.slope = self.create_var((1, hier_shape), activation="sigmoid")
-        self.intercept = self.create_var((1, hier_shape), activation="tanh")
+        self.slope, self.slope_hier = self.create_hier_var(
+            (1, hier_shape), 1, activation="sigmoid"
+        )
+        self.intercept, self.intercept_hier = self.create_hier_var(
+            (1, hier_shape), 1, activation="tanh"
+        )
 
     def forward(self, nr: torch.Tensor) -> torch.Tensor:
-        volume = self.slope * nr + self.intercept
+        # Volume conversion is defined as a linear function of the net revenue
+        volume = (
+            self.slope.apply_activation() + self.slope_hier.apply_activation()
+        ) * nr + (
+            self.intercept.apply_activation() + self.intercept_hier.apply_activation()
+        )
         return volume
