@@ -1,6 +1,5 @@
-from datetime import datetime
 from pathlib import Path
-from typing import Dict, Tuple, Union
+from typing import Any, Dict, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -11,8 +10,10 @@ from torch.utils.data import DataLoader, TensorDataset
 class Dataset:
     def __init__(self, path: Union[str, Path]):
         self.path = Path(path)
-        self.load()
+        if not self.path.exists():
+            raise FileNotFoundError(f"Data directory not found: {self.path}")
 
+        self.load()
         self.encodings = self.create_encodings()
 
         self.n_sku = len(self.encodings["label_dict"]["sku"])
@@ -20,7 +21,7 @@ class Dataset:
         self.n_discount_type = len(self.encodings["label_dict"]["discount"])
 
         self.sales_index = self.encodings["sales_index"]
-        self.sku_list = self.encodings["label_dict"]["sku"]
+        self.sku_list = list(self.encodings["label_dict"]["sku"].keys())
 
         self.filter_data()
         self.process_sales_data()
@@ -30,11 +31,23 @@ class Dataset:
         self.tensor_dataset = self.create_tensors()
 
     def load(self) -> None:
+        required_files = [
+            "sales_data",
+            "brand_segment_mapping",
+            "macro_data",
+            "maximum_brand_discount_constraint",
+            "maximum_pack_discount_constraint",
+            "maximum_segment_discount_constraint",
+            "volume_variation_constraint",
+        ]
+
+        for file in required_files:
+            if not (self.path / f"{file}.csv").exists():
+                raise FileNotFoundError(f"Required file not found: {file}.csv")
+
         self.raw_sales_data = self.read_csv("sales_data")
         self.raw_segment_mapping = self.read_csv("brand_segment_mapping")
-
         self.raw_macro_data = self.read_csv("macro_data")
-
         self.raw_brand_constraint = self.read_csv("maximum_brand_discount_constraint")
         self.raw_pack_constraint = self.read_csv("maximum_pack_discount_constraint")
         self.raw_segment_constraint = self.read_csv(
@@ -45,29 +58,26 @@ class Dataset:
     def read_csv(self, filename: str) -> pd.DataFrame:
         data = pd.read_csv(self.path / f"{filename}.csv")
         if "year" in data.columns and "month" in data.columns:
-            data["date"] = data.apply(
-                lambda x: datetime(int(x["year"]), int(x["month"]), 1), axis=1
-            )
+            data["date"] = pd.to_datetime(data[["year", "month"]].assign(day=1))
             data.drop(columns=["year", "month"], inplace=True)
         return data
 
-    def create_encodings(self) -> Dict:
+    def create_encodings(self) -> Dict[str, Any]:
         master_mapping = (
             self.raw_sales_data[["sku", "brand", "pack", "size"]]
             .drop_duplicates()
             .merge(self.raw_segment_mapping)
         )
 
-        def label_encoder(series):
+        def label_encoder(series: pd.Series) -> Dict[str, int]:
             unique_values = series.sort_values().unique()
             return dict(zip(unique_values, range(len(unique_values))))
 
-        def mapper(col_val, col_key="sku"):
+        def mapper(col_val: str, col_key: str = "sku") -> Dict[str, int]:
             nonlocal master_mapping, label_dict
             df = master_mapping[[col_key, col_val]].drop_duplicates()
             df.loc[:, col_val] = df[col_val].map(label_dict[col_val])
             df.loc[:, col_key] = df[col_key].map(label_dict[col_key])
-
             return df.set_index(col_key).to_dict()[col_val]
 
         label_dict = {
@@ -125,7 +135,7 @@ class Dataset:
 
         self.volume_data = sales_data["volume_hl"].clip(lower=0).fillna(0)
         self.discount_data = (
-            sales_data[self.encodings["label_dict"]["discount"].keys()]
+            sales_data[list(self.encodings["label_dict"]["discount"].keys())]
             .swaplevel(0, 1, axis=1)
             .sort_index(axis=1)
         )
@@ -151,23 +161,23 @@ class Dataset:
         self.macro_scaler = self.macro_data.mean()
 
         self.nr = (self.nr_data / self.scaler).values
-        self.nr_lag = (self.nr_lag_data / self.scaler).values
+        self.nr_lag = np.array(self.nr_lag_data / self.scaler)
         self.nr_lag = np.expand_dims(self.nr_lag, 1)
-        self.base_init = (self.base_init / self.scaler).values
+        self.base_init = np.array(self.base_init / self.scaler)
         self.base_init = np.expand_dims(self.base_init, 0)
 
         self.volume = (self.volume_data / self.vol_scaler).values
         self.macro = (self.macro_data / self.macro_scaler - 1).values
         self.macro = np.expand_dims(self.macro, 1)
 
-        self.discount = (self.discount_data / self.scaler).values
+        self.discount = np.array(self.discount_data / self.scaler)
         self.discount = self.discount.reshape(
             len(self.sales_index), len(self.sku_list), -1
         )
 
     def create_tensors(self) -> TensorDataset:
         # Create a tensor dataset
-        dataset = TensorDataset(
+        return TensorDataset(
             torch.tensor(self.nr, dtype=torch.float32),
             torch.tensor(self.volume, dtype=torch.float32),
             torch.tensor(self.mask, dtype=torch.bool),
@@ -176,13 +186,13 @@ class Dataset:
             torch.tensor(self.macro, dtype=torch.float32),
             torch.tensor(self.discount, dtype=torch.float32),
         )
-        return dataset
 
     def train_test_split(
         self, train_size: float = 0.75, batch_size: int = 1024, *args, **kwargs
     ) -> Tuple[DataLoader, DataLoader]:
-        # 3 fold temporal cross validation needed?
-        # create dataloaders
+        if not 0 < train_size < 1:
+            raise ValueError("train_size must be between 0 and 1")
+
         train_size = int(train_size * len(self.tensor_dataset))
 
         train_dataset = TensorDataset(*self.tensor_dataset[:train_size])
