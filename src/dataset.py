@@ -179,7 +179,7 @@ class Dataset:
         return dataset
 
     def train_test_split(
-        self, train_size: float = 0.75, batch_size: int = 100, *args, **kwargs
+        self, train_size: float = 0.75, batch_size: int = 1024, *args, **kwargs
     ) -> Tuple[DataLoader, DataLoader]:
         # 3 fold temporal cross validation needed?
         # create dataloaders
