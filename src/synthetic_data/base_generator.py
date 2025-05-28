@@ -18,15 +18,30 @@ class BaseSyntheticData(dict):
     def __init__(self, path: Union[str, Path]) -> None:
 
         path = Path(path)
-        with open(path / "columns.json", "r") as c, open(path / "data.json", "r") as d:
-            self.data_config = json.loads(d.read())
+        with open(path / "columns.json", "r") as c:
             self.columns = json.loads(c.read())
-            if "year" in self.columns or "month" in self.columns:
-                self.time_config = json.loads(open(path / "time.json", "r").read())
-            else:
-                self.time_config = {}
+        with open(path / "data.json", "r") as d:
+            self.data_config = json.loads(d.read())
+        if "year" in self.columns or "month" in self.columns:
+            with open(path / "time.json", "r") as t:
+                self.time_config = json.loads(t.read())
+        else:
+            self.time_config = {}
 
         self.generator_dict = self.column_data_generator_dict()
+        if self.time_config:
+            self.time_columns = [
+                i for i, j in self.columns.items() if j["group"] == "time"
+            ]
+            self.time_data = cross_join_data(
+                [self.generator_dict[i] for i in self.time_columns]
+            )
+            self.time_data["time_index"] = self.time_data.apply(
+                lambda x: (x.year - self.time_config["start"]["year"]) * 12
+                + x.month
+                - 1,
+                axis=1,
+            )
         super().__init__()
 
     def column_data_generator_dict(self) -> Dict[str, pd.Series]:
@@ -42,12 +57,12 @@ class BaseSyntheticData(dict):
                     name=col,
                 )
             elif col == "month":
-                # TODO: clip start and end months from config for start and end years
+                assert (
+                    self.time_config["start"]["month"] == 1
+                ), "Data generation requires start month to be 1"
                 generator_dict[col] = pd.Series(np.arange(1, 13), name=col)
             elif col_config["type"] == "str":
-                generator_dict[col] = random_string_list(
-                    col, 2
-                )  # TODO: Increase number of strings?
+                generator_dict[col] = random_string_list(col, 2)
         return generator_dict
 
     def create_fake_data(self, data_name: str) -> pd.DataFrame:

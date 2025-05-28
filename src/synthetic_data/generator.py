@@ -1,35 +1,46 @@
 """
-This module is used to generate synthetic data
+This module is used to generate synthetic data that follows the model structure
 """
 
-# TODO: Make the data generation more realistic
-
+import json
 from pathlib import Path
-from typing import Union
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import pandas as pd
+from scipy.stats import norm
 
 from .base_generator import BaseSyntheticData
-from .utils import (random_data_generator, random_map_join_data,
-                    random_string_list)
+from .utils import (
+    cross_join_data,
+    random_data_generator,
+    random_map_join_data,
+    random_string_list,
+)
 
 
 class SyntheticData(BaseSyntheticData):
     def __init__(self, path: Union[str, Path]) -> None:
         super().__init__(path)
+        path = Path(path)
+
+        with open(path / "macro_data.json", "r") as f:
+            self.macro_data_config = json.load(f)
+
         self.generator_dict["sku"] = random_string_list("sku", 1000)
         self.generator_dict["brand"] = random_string_list("brand", 20)
         self.generator_dict["pack"] = random_string_list("pack", 5)
         self.generator_dict["size"] = random_string_list("size", 3)
         self.generator_dict["price_segment"] = random_string_list("price_segment", 3)
 
+        self.params = self._initialize_params()
+
     def generate_datasets(self) -> None:
         """Sets the synthetic data based on the configuration"""
 
+        self["brand_segment_mapping"] = self.create_brand_segment_mapping()
         self["macro_data"] = self.create_macro_data()
         self["sales_data"] = self.create_sales_data()
-        self["brand_segment_mapping"] = self.create_brand_segment_mapping()
         self["maximum_brand_discount_constraint"] = (
             self.create_brand_discount_constraint()
         )
@@ -43,105 +54,129 @@ class SyntheticData(BaseSyntheticData):
 
         super().generate_datasets()
 
-    def create_macro_data(self) -> pd.DataFrame:
+    def _initialize_params(self) -> Dict[str, Dict]:
+        params = {
+            "brand": self._initialize_brand_params(),
+            "segment": self._initialize_segment_params(),
+            "pack": self._initialize_pack_params(),
+            "size": self._initialize_size_params(),
+            "macro": self._initialize_macro_params(),
+        }
+        return params
 
-        years = self.generator_dict["year"]
-        months = self.generator_dict["month"]
-        data = []
+    def _initialize_segment_params(self) -> Dict:
+        params = {
+            segment: {"price_range": (100 + i * 50, 100 + (i + 1) * 50)}
+            for i, segment in enumerate(self.generator_dict["price_segment"])
+        }
+        return params
 
-        base_retail_sales = 100  # Base index
-        base_unemployment = 5.0  # Base %
-        base_cpi = 100  # Base index
-        base_private_consumption = 500  # Base consumption in billions
-        base_gross_domestic_saving = 150  # Base savings in billions
-        base_broad_money = 200  # Base money supply in billions
-        base_gdp = 1000  # Base GDP in billions
+    def _initialize_brand_params(self) -> Dict:
+        params = {
+            brand: {
+                "price_elasticity": np.random.uniform(0.1, 0.9),
+                "seasonality": np.random.uniform(-0.1, 0.1),
+                "discount_sensitivity": np.random.uniform(0.5, 3),
+                "macro_sensitivity": 1 + np.random.uniform(-0.2, 0.2),
+                "trend": np.random.uniform(0.02, 0.05) / 12,
+                "marketing_budget_ratio": np.random.uniform(0.02, 0.1),
+            }
+            for brand in self.generator_dict["brand"]
+        }
+        return params
 
-        for year in years:
-            for month in months:
-                retail_sales = base_retail_sales * (1 + 0.01 * np.random.randn())
-                unemployment_rate = base_unemployment + 0.1 * np.random.randn()
-                cpi = base_cpi * (1 + 0.005 * np.random.randn())
-                private_consumption = base_private_consumption * (
-                    1 + 0.01 * np.random.randn()
-                )
-                gross_domestic_saving = base_gross_domestic_saving * (
-                    1 + 0.015 * np.random.randn()
-                )
-                broad_money = base_broad_money * (1 + 0.012 * np.random.randn())
-                gdp = base_gdp * (1 + 0.02 * np.random.randn())
+    def _initialize_pack_params(self) -> Dict:
+        params = {
+            pack: {
+                "price_multiplier": 0.003 * (3 * i if i else 1),
+                "discount_multiplier": 1 + np.random.uniform(-0.05, 0.05),
+            }
+            for i, pack in enumerate(self.generator_dict["pack"])
+        }
+        return params
 
-                # Introduce COVID-19 effects (2020-2021)
-                if (
-                    self.time_config["covid_start"]["year"]
-                    <= year
-                    <= self.time_config["covid_end"]["year"]
-                ) and (
-                    self.time_config["covid_start"]["month"]
-                    <= month
-                    <= self.time_config["covid_end"]["month"]
-                ):
-                    # Adjust macroeconomic indicators
-                    retail_sales *= np.random.uniform(0.7, 0.9)  # Drop in sales
-                    unemployment_rate *= np.random.uniform(
-                        1.2, 1.5
-                    )  # Increase in unemployment
-                    cpi *= np.random.uniform(
-                        0.95, 1.05
-                    )  # Slight inflation or deflation
-                    private_consumption *= np.random.uniform(
-                        0.7, 0.85
-                    )  # Drop in spending
-                    gross_domestic_saving *= np.random.uniform(
-                        0.8, 1.1
-                    )  # Mixed effects on savings
-                    broad_money *= np.random.uniform(
-                        1.1, 1.3
-                    )  # Increase due to stimulus measures
-                    gdp *= np.random.uniform(0.7, 0.85)  # Economic contraction
+    def _initialize_size_params(self) -> Dict:
+        """Initialize size parameters"""
+        params = {
+            size: {
+                "price_multiplier": 1.5 + 0.5 * i,
+                "discount_multiplier": 1 + np.random.uniform(-0.05, 0.05),
+            }
+            for i, size in enumerate(self.generator_dict["size"])
+        }
+        return params
 
-                data.append(
-                    [
-                        year,
-                        month,
-                        retail_sales,
-                        unemployment_rate,
-                        cpi,
-                        private_consumption,
-                        gross_domestic_saving,
-                        broad_money,
-                        gdp,
-                    ]
-                )
+    def _initialize_macro_params(self) -> Dict:
+        params = {
+            i: {
+                "trend": np.random.uniform(-0.001, 0.002) / 12,
+                "base": config["base_value"],
+                "me_multiplier": np.random.uniform(0.1, 0.3),
+                "roi_multiplier": np.random.uniform(0.1, 0.3),
+            }
+            for i, config in self.macro_data_config.items()
+        }
+        return params
 
-                # Introduce slight trend over time
-                base_retail_sales *= 1.002
-                base_unemployment *= 1 + np.random.uniform(-0.01, 0.01)
-                base_cpi *= 1.002
-                base_private_consumption *= 1.003
-                base_gross_domestic_saving *= 1.002
-                base_broad_money *= 1.004
-                base_gdp *= 1.005
-
-        df = pd.DataFrame(
-            data,
-            columns=[
-                "year",
-                "month",
-                "retail_sales_index",
-                "unemployment_rate",
-                "cpi",
-                "private_consumption",
-                "gross_domestic_saving",
-                "broad_money",
-                "gdp",
-            ],
+    def create_brand_segment_mapping(self) -> pd.DataFrame:
+        df = random_map_join_data(
+            [self.generator_dict["brand"], self.generator_dict["price_segment"]],
         )
-        return df
+        return df[self.data_config["brand_segment_mapping"]]
+
+    def create_macro_data(self) -> pd.DataFrame:
+        params = (
+            pd.DataFrame(self.params["macro"]).T.rename_axis("variable").reset_index()
+        )
+        df = cross_join_data([self.time_data, params])
+
+        df["trend"] = 1 + df.trend * df.time_index
+        df["variance"] = np.random.normal(
+            loc=df.base, scale=df.base * 0.02, size=df.shape[0]
+        )
+        df["variance"] = df.groupby("variable").variance.transform(
+            lambda x: x.rolling(window=9, min_periods=1).mean()
+        )
+        df["value"] = df.variance * df.trend
+
+        df = (
+            df.groupby([*self.time_columns, "variable"])["value"]
+            .sum()
+            .unstack("variable")
+            .reset_index()
+            .rename_axis(None, axis=1)
+        )
+        return df[self.data_config["macro_data"]]
+
+    def _calculate_mixed_effects(self, macro_vars: pd.DataFrame) -> pd.DataFrame:
+        me_mult = {i: j["me_multiplier"] for i, j in self.params["macro"].items()}
+        roi_mult = {i: j["roi_multiplier"] for i, j in self.params["macro"].items()}
+
+        var_names = [
+            i
+            for i in self.data_config["macro_data"].columns
+            if i not in self.time_columns
+        ]
+
+        normalize = lambda x: (x - x.mean()) / x.std()
+        pertubate_func = lambda x, mult: 1 + np.tanh(x * mult[x.name])
+
+        macro_vars[var_names] = macro_vars[var_names].apply(normalize, axis=0)
+
+        macro_vars["me_effect"] = macro_vars[var_names].apply(
+            pertubate_func, mult=me_mult
+        ).prod(axis=1) ** (1 / len(var_names))
+        macro_vars["roi_mult"] = macro_vars[var_names].apply(
+            pertubate_func, mult=roi_mult
+        ).prod(axis=1) ** (1 / len(var_names))
+
+        return macro_vars[[*self.time_columns, "me_effect", "roi_mult"]]
 
     def create_sales_data(self) -> pd.DataFrame:
 
-        df = random_map_join_data(
+        macro_effect = self._calculate_mixed_effects(self["macro_data"])
+
+        sku_list = random_map_join_data(
             [
                 self.generator_dict["sku"],
                 self.generator_dict["brand"],
@@ -149,148 +184,179 @@ class SyntheticData(BaseSyntheticData):
                 self.generator_dict["size"],
             ],
         )
+        sku_list = sku_list.merge(self["brand_segment_mapping"])
+        params = self._combine_params(sku_list)
 
-        data = []
+        df = cross_join_data([self.time_data, params])
+        df = df.merge(macro_effect, how="left")
 
-        for year in self.generator_dict["year"]:
-            for month in self.generator_dict["month"]:
-                for sku in self.generator_dict["sku"]:
-                    # Retrieve corresponding row with categorical values
-                    row = df[df["sku"] == sku].iloc[0]
+        df["price"] = df.base_price * random_data_generator(
+            df.shape[0], 1, 0.05, 1, dist="normal"
+        )
 
-                    volume_hl = np.random.uniform(
-                        10, 500
-                    )  # Sales volume in hectoliters
-                    gto = volume_hl * np.random.uniform(50, 150)  # Gross trade output
-                    promotional_discount = gto * np.random.uniform(0.05, 0.2)
-                    other_discount = gto * np.random.uniform(0.01, 0.05)
-                    total_discount = promotional_discount + other_discount
-                    excise = gto * np.random.uniform(0.02, 0.1)
-                    net_revenue = gto - total_discount - excise
-                    maco = net_revenue * np.random.uniform(
-                        0.2, 0.4
-                    )  # Margin contribution
-                    vilc = net_revenue * np.random.uniform(
-                        0.1, 0.3
-                    )  # Variable indirect logistic cost
+        df["trend"] = 1 + df.trend * df.time_index
+        df["seasonality"] = 1 + df.seasonality * np.sin(
+            2 * np.pi * df.time_index / 12 - np.pi / 2
+        )
+        df["organic_sales"] = (
+            df.base_value
+            * df.trend
+            * df.seasonality
+            * (1 + df.macro_sensitivity * (df.me_effect - 1))
+            * (df.price / df.base_price) ** -df.price_elasticity
+        )
 
-                    # Introduce COVID-19 effects (2020-2021)
-                    if (
-                        self.time_config["covid_start"]["year"]
-                        <= year
-                        <= self.time_config["covid_end"]["year"]
-                    ) and (
-                        self.time_config["covid_start"]["month"]
-                        <= month
-                        <= self.time_config["covid_end"]["month"]
-                    ):
-                        volume_hl *= np.random.uniform(0.6, 0.8)  # Drop in sales volume
-                        gto *= np.random.uniform(
-                            0.6, 0.8
-                        )  # Lower revenue due to demand drop
-                        promotional_discount *= np.random.uniform(
-                            1.2, 1.5
-                        )  # Increased promotions
-                        other_discount *= np.random.uniform(1.1, 1.3)
-                        total_discount = promotional_discount + other_discount
-                        excise *= np.random.uniform(
-                            0.9, 1.1
-                        )  # Minor variation in tax impact
-                        net_revenue = gto - total_discount - excise
-                        maco *= np.random.uniform(0.5, 0.8)  # Lower profitability
-                        vilc *= np.random.uniform(1.1, 1.3)  # Increased logistics costs
+        df["promotional_discount"] = (
+            0.5
+            * df.marketing_budget_ratio
+            * df.base_value
+            * random_data_generator(
+                df.shape[0], p1=2, p2=5, scale=1, dist="beta", sparsity=0.3
+            )
+        )
+        df["other_discount"] = (
+            0.5
+            * df.marketing_budget_ratio
+            * df.base_value
+            * random_data_generator(
+                df.shape[0], p1=2, p2=5, scale=1, dist="beta", sparsity=0.7
+            )
+        )
+        df["total_discount"] = df.promotional_discount + df.other_discount
+        df["discount_uplift"] = (
+            df.discount_sensitivity
+            * df.total_discount
+            * (1 + df.macro_sensitivity * (df.roi_mult - 1))
+        )
 
-                    data.append(
-                        [
-                            year,
-                            month,
-                            sku,
-                            row["brand"],
-                            row["pack"],
-                            row["size"],
-                            volume_hl,
-                            gto,
-                            promotional_discount,
-                            other_discount,
-                            total_discount,
-                            excise,
-                            net_revenue,
-                            maco,
-                            vilc,
-                        ]
-                    )
+        df["gto"] = (
+            df.organic_sales
+            + df.discount_uplift
+            + np.random.normal(0.05 * df.base_value)
+        )
+        df["excise"] = df.gto * random_data_generator(
+            df.shape[0], 0.12, 0.15, 1, dist="uniform"
+        )
+        df["vilc"] = df.gto * random_data_generator(
+            df.shape[0], 0.09, 0.11, 1, dist="uniform"
+        )
 
-        # Create a DataFrame from the generated data
-        columns = [
-            "year",
-            "month",
-            "sku",
-            "brand",
-            "pack",
-            "size",
-            "volume_hl",
-            "gto",
-            "promotional_discount",
-            "other_discount",
-            "total_discount",
-            "excise",
-            "net_revenue",
-            "maco",
-            "vilc",
+        df["volume_hl"] = df.gto / df.price
+        df["net_revenue"] = df.gto - df.total_discount - df.excise
+        df["maco"] = df.net_revenue - df.vilc
+
+        return df[self.data_config["sales_data"]]
+
+    def _combine_params(self, sku_list: pd.DataFrame) -> pd.DataFrame:
+        brand_params = (
+            pd.DataFrame(self.params["brand"]).T.rename_axis("brand").reset_index()
+        )
+        segment_params = (
+            pd.DataFrame(self.params["segment"])
+            .T.rename_axis("price_segment")
+            .reset_index()
+        )
+        pack_params = (
+            pd.DataFrame(self.params["pack"]).T.rename_axis("pack").reset_index()
+        )
+        size_params = (
+            pd.DataFrame(self.params["size"]).T.rename_axis("size").reset_index()
+        )
+
+        pack_size_params = pack_params.merge(
+            size_params, how="cross", suffixes=("_pack", "_size")
+        )
+
+        params = (
+            sku_list.merge(brand_params, how="left")
+            .merge(segment_params, how="left")
+            .merge(pack_size_params, how="left")
+        )
+
+        params["base_value"] = random_data_generator(
+            params.shape[0], 2, 5, 100000, dist="beta"
+        )
+        params["base_price"] = params.apply(
+            lambda x: np.random.uniform(*x.price_range), axis=1
+        )
+        params["base_price"] *= (
+            params.price_multiplier_pack * params.price_multiplier_size
+        )
+        params["discount_sensitivity"] *= (
+            params.discount_multiplier_pack * params.discount_multiplier_size
+        )
+        return params[
+            [
+                *sku_list.columns,
+                "base_value",
+                "base_price",
+                *[i for i in brand_params.columns if i != "brand"],
+            ]
         ]
 
-        return pd.DataFrame(data, columns=columns)
-
-    def create_brand_segment_mapping(self) -> pd.DataFrame:
-        df = random_map_join_data(
-            [self.generator_dict["brand"], self.generator_dict["price_segment"]],
-        )
-        return df
-
     def create_brand_discount_constraint(self) -> pd.DataFrame:
+        """Create brand-specific discount constraints"""
 
-        df = pd.DataFrame(
-            {
-                "brand": self.generator_dict["brand"],
-                "discount": np.random.uniform(
-                    0.05, 0.3, len(self.generator_dict["brand"])
-                ),
-            }
+        df = self.generator_dict["brand"].to_frame()
+
+        discount_data = self["sales_data"][
+            [*self.time_columns, "brand", "total_discount"]
+        ]
+        discount_data = discount_data.groupby(
+            [*self.time_columns, "brand"]
+        ).total_discount.sum()
+        discount_data = discount_data.groupby("brand").mean().values
+
+        df["discount"] = discount_data * random_data_generator(
+            df.shape[0], 1.1, 0.1, 1, dist="normal"
         )
         return df
 
     def create_pack_discount_constraint(self) -> pd.DataFrame:
+        """Create pack-specific discount constraints"""
+        df = self.generator_dict["pack"].to_frame()
 
-        df = pd.DataFrame(
-            {
-                "pack": self.generator_dict["pack"],
-                "discount": np.random.uniform(
-                    0.05, 0.3, len(self.generator_dict["pack"])
-                ),
-            }
+        discount_data = self["sales_data"][
+            [*self.time_columns, "pack", "total_discount"]
+        ]
+        discount_data = discount_data.groupby(
+            [*self.time_columns, "pack"]
+        ).total_discount.sum()
+        discount_data = discount_data.groupby("pack").mean().values
+
+        df["discount"] = discount_data * random_data_generator(
+            df.shape[0], 1.1, 0.1, 1, dist="normal"
         )
         return df
 
     def create_segment_discount_constraint(self) -> pd.DataFrame:
+        """Create segment-specific discount constraints"""
+        df = self.generator_dict["price_segment"].to_frame()
 
-        df = pd.DataFrame(
-            {
-                "price_segment": self.generator_dict["price_segment"],
-                "discount": np.random.uniform(
-                    0.05, 0.3, len(self.generator_dict["price_segment"])
-                ),
-            }
+        discount_data = self["sales_data"].merge(
+            self["brand_segment_mapping"], how="left"
+        )
+        discount_data = discount_data[
+            [*self.time_columns, "price_segment", "total_discount"]
+        ]
+        discount_data = discount_data.groupby(
+            [*self.time_columns, "price_segment"]
+        ).total_discount.sum()
+        discount_data = discount_data.groupby("price_segment").mean().values
+
+        df["discount"] = discount_data * random_data_generator(
+            df.shape[0], 1.1, 0.1, 1, dist="normal"
         )
         return df
 
     def create_volume_variation_constraint(self) -> pd.DataFrame:
-
+        """Create volume variation constraints"""
         df = self["sales_data"][["sku", "brand"]].drop_duplicates()
-        df["min_volume_variation"] = 1 - random_data_generator(
-            df.shape[0], 0, 0.2, dist="uniform"
-        )
-        df["max_volume_variation"] = 1 + random_data_generator(
-            df.shape[0], 0, 0.2, dist="uniform"
-        )
 
+        df["min_volume_variation"] = random_data_generator(
+            df.shape[0], 0.7, 1, 1, dist="uniform"
+        )
+        df["max_volume_variation"] = random_data_generator(
+            df.shape[0], 1, 1.3, 1, dist="uniform"
+        )
         return df

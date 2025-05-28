@@ -1,0 +1,23 @@
+{
+    "retail_sales_index": {
+        "base_value": 100
+    },
+    "unemployment_rate": {
+        "base_value": 5.0
+    },
+    "cpi": {
+        "base_value": 120
+    },
+    "private_consumption": {
+        "base_value": 200
+    },
+    "gross_domestic_saving": {
+        "base_value": 130
+    },
+    "brad_money": {
+        "base_value": 500
+    },
+    "gdp": {
+        "base_value": 1000
+    }
+}
