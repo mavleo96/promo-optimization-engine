@@ -19,7 +19,7 @@ class PredictionLogger(L.Callback):
     def on_train_end(self, trainer: L.Trainer, pl_module: HierarchicalRegressionModel):
         # Get the full dataset and move to the correct device
         tensors = [t.to(pl_module.device) for t in self.dataset.tensors]
-        y, y_vol, mask, time_index, nr_lag, macro, discount = tensors
+        y, y_vol, mask, time_index, sales_lag, macro, discount = tensors
 
         # Get predictions
         pl_module.eval()
@@ -63,12 +63,12 @@ class PredictionLogger(L.Callback):
         plt.figure(figsize=(12, 6))
         plt.plot(y_sum.numpy(), label="actual", alpha=0.7)
         plt.plot(y_hat_sum.numpy(), label="predicted", alpha=0.7)
-        plt.title("total net revenue: actual vs predicted")
+        plt.title("total sales: actual vs predicted")
         plt.xlabel("time")
-        plt.ylabel("net revenue")
+        plt.ylabel("sales")
         plt.legend()
         trainer.logger.experiment.add_figure(
-            "total_net_revenue_comparison", plt.gcf(), global_step=trainer.global_step
+            "total_sales_comparison", plt.gcf(), global_step=trainer.global_step
         )
         plt.close()
 
@@ -92,17 +92,22 @@ def main():
     parser.add_argument("--device", type=str, default="cpu")
     parser.add_argument("--batch_size", type=int, default=1024)
     parser.add_argument("--num_epochs", type=int, default=1000)
+    parser.add_argument("--train_ratio", type=float, default=0.75)
+    parser.add_argument("--run_name", type=str, default="default")
     args = parser.parse_args()
 
     data = Dataset(args.data_path)
     train_loader, val_loader = data.train_test_split(
-        num_workers=2, persistent_workers=True
+        train_ratio=args.train_ratio,
+        batch_size=args.batch_size,
+        num_workers=2,
+        persistent_workers=True,
     )
 
     model = HierarchicalRegressionModel(data)
     prediction_logger = PredictionLogger(data.tensor_dataset)
 
-    logger = TensorBoardLogger(save_dir=".")
+    logger = TensorBoardLogger(save_dir=".", version=args.run_name)
     trainer = L.Trainer(
         max_epochs=args.num_epochs,
         accelerator="auto",

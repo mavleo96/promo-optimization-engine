@@ -125,7 +125,7 @@ class VolumeConversion(BaseModuleClass):
         self.slope = self.create_var((1, hier_shape), activation="sigmoid")
         self.intercept = self.create_var((1, hier_shape), activation="tanh")
 
-    def forward(self, nr: torch.Tensor) -> torch.Tensor:
+    def forward(self, sales: torch.Tensor) -> torch.Tensor:
         # Volume conversion is defined as a linear function of the net revenue
-        volume = self.slope.apply_activation() * nr + self.intercept.apply_activation()
+        volume = self.slope.apply_activation() * sales + self.intercept.apply_activation()
         return volume
