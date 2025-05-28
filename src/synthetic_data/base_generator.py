@@ -30,16 +30,10 @@ class BaseSyntheticData(dict):
 
         self.generator_dict = self.column_data_generator_dict()
         if self.time_config:
-            self.time_columns = [
-                i for i, j in self.columns.items() if j["group"] == "time"
-            ]
-            self.time_data = cross_join_data(
-                [self.generator_dict[i] for i in self.time_columns]
-            )
+            self.time_columns = [i for i, j in self.columns.items() if j["group"] == "time"]
+            self.time_data = cross_join_data([self.generator_dict[i] for i in self.time_columns])
             self.time_data["time_index"] = self.time_data.apply(
-                lambda x: (x.year - self.time_config["start"]["year"]) * 12
-                + x.month
-                - 1,
+                lambda x: (x.year - self.time_config["start"]["year"]) * 12 + x.month - 1,
                 axis=1,
             )
         super().__init__()
@@ -73,16 +67,12 @@ class BaseSyntheticData(dict):
         cat_list = [
             i
             for i in column_list
-            if (self.columns[i]["type"] == "str")
-            or (self.columns[i]["group"] == "time")
+            if (self.columns[i]["type"] == "str") or (self.columns[i]["group"] == "time")
         ]
         num_list = [
             i
             for i in column_list
-            if not (
-                (self.columns[i]["type"] == "str")
-                or (self.columns[i]["group"] == "time")
-            )
+            if not ((self.columns[i]["type"] == "str") or (self.columns[i]["group"] == "time"))
         ]
 
         # Creating categorical df and changing the frequency if required

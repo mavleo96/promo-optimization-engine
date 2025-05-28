@@ -10,12 +10,7 @@ import numpy as np
 import pandas as pd
 
 from .base_generator import BaseSyntheticData
-from .utils import (
-    cross_join_data,
-    random_data_generator,
-    random_map_join_data,
-    random_string_list,
-)
+from .utils import cross_join_data, random_data_generator, random_map_join_data, random_string_list
 
 
 class SyntheticData(BaseSyntheticData):
@@ -42,15 +37,9 @@ class SyntheticData(BaseSyntheticData):
         self["brand_segment_mapping"] = self.create_brand_segment_mapping()
         self["macro_data"] = self.create_macro_data()
         self["sales_data"] = self.create_sales_data()
-        self["maximum_brand_discount_constraint"] = (
-            self.create_brand_discount_constraint()
-        )
-        self["maximum_pack_discount_constraint"] = (
-            self.create_pack_discount_constraint()
-        )
-        self["maximum_segment_discount_constraint"] = (
-            self.create_segment_discount_constraint()
-        )
+        self["maximum_brand_discount_constraint"] = self.create_brand_discount_constraint()
+        self["maximum_pack_discount_constraint"] = self.create_pack_discount_constraint()
+        self["maximum_segment_discount_constraint"] = self.create_segment_discount_constraint()
         self["volume_variation_constraint"] = self.create_volume_variation_constraint()
 
         super().generate_datasets()
@@ -126,15 +115,11 @@ class SyntheticData(BaseSyntheticData):
 
     def create_macro_data(self) -> pd.DataFrame:
         """Create macroeconomic data."""
-        params = (
-            pd.DataFrame(self.params["macro"]).T.rename_axis("variable").reset_index()
-        )
+        params = pd.DataFrame(self.params["macro"]).T.rename_axis("variable").reset_index()
         df = cross_join_data([self.time_data, params])
 
         df["trend"] = 1 + df.trend_rate * df.time_index
-        df["variance"] = np.random.normal(
-            loc=df.base, scale=df.base * 0.05, size=df.shape[0]
-        )
+        df["variance"] = np.random.normal(loc=df.base, scale=df.base * 0.05, size=df.shape[0])
         df["variance"] = df.groupby("variable").variance.transform(
             lambda x: x.rolling(window=9, min_periods=1).mean()
         )
@@ -154,9 +139,7 @@ class SyntheticData(BaseSyntheticData):
         me_mult = {i: j["me_multiplier"] for i, j in self.params["macro"].items()}
         roi_mult = {i: j["roi_multiplier"] for i, j in self.params["macro"].items()}
 
-        var_names = [
-            i for i in self.data_config["macro_data"] if i not in self.time_columns
-        ]
+        var_names = [i for i in self.data_config["macro_data"] if i not in self.time_columns]
         df = self["macro_data"].copy()
 
         normalize = lambda x: (x / x.mean() - 1)
@@ -198,9 +181,7 @@ class SyntheticData(BaseSyntheticData):
 
     def _calculate_base_metrics(self, df: pd.DataFrame) -> pd.DataFrame:
         """Calculate base metrics for sales data."""
-        df["price"] = df.base_price * random_data_generator(
-            df.shape[0], 1, 0.05, 1, dist="normal"
-        )
+        df["price"] = df.base_price * random_data_generator(df.shape[0], 1, 0.05, 1, dist="normal")
 
         df["trend"] = 1 + df.trend_rate * df.time_index
         df["organic_sales"] = (
@@ -217,17 +198,13 @@ class SyntheticData(BaseSyntheticData):
             0.5
             * df.marketing_budget_ratio
             * df.base_value
-            * random_data_generator(
-                df.shape[0], p1=2, p2=5, scale=1, dist="beta", sparsity=0.3
-            )
+            * random_data_generator(df.shape[0], p1=2, p2=5, scale=1, dist="beta", sparsity=0.3)
         )
         df["other_discount"] = (
             0.5
             * df.marketing_budget_ratio
             * df.base_value
-            * random_data_generator(
-                df.shape[0], p1=2, p2=5, scale=1, dist="beta", sparsity=0.7
-            )
+            * random_data_generator(df.shape[0], p1=2, p2=5, scale=1, dist="beta", sparsity=0.7)
         )
         df["total_discount"] = df.promotional_discount + df.other_discount
         df["discount_uplift"] = (
@@ -239,17 +216,9 @@ class SyntheticData(BaseSyntheticData):
 
     def _calculate_final_metrics(self, df: pd.DataFrame) -> pd.DataFrame:
         """Calculate final sales metrics."""
-        df["gto"] = (
-            df.organic_sales
-            + df.discount_uplift
-            + np.random.normal(0.05 * df.base_value)
-        )
-        df["excise"] = df.gto * random_data_generator(
-            df.shape[0], 0.12, 0.15, 1, dist="uniform"
-        )
-        df["vilc"] = df.gto * random_data_generator(
-            df.shape[0], 0.09, 0.11, 1, dist="uniform"
-        )
+        df["gto"] = df.organic_sales + df.discount_uplift + np.random.normal(0.05 * df.base_value)
+        df["excise"] = df.gto * random_data_generator(df.shape[0], 0.12, 0.15, 1, dist="uniform")
+        df["vilc"] = df.gto * random_data_generator(df.shape[0], 0.09, 0.11, 1, dist="uniform")
 
         df["volume_hl"] = df.gto / df.price
         df["net_revenue"] = df.gto - df.total_discount - df.excise
@@ -258,24 +227,14 @@ class SyntheticData(BaseSyntheticData):
 
     def _combine_params(self, sku_list: pd.DataFrame) -> pd.DataFrame:
         """Combine all parameter dataframes into a single dataframe."""
-        brand_params = (
-            pd.DataFrame(self.params["brand"]).T.rename_axis("brand").reset_index()
-        )
+        brand_params = pd.DataFrame(self.params["brand"]).T.rename_axis("brand").reset_index()
         segment_params = (
-            pd.DataFrame(self.params["segment"])
-            .T.rename_axis("price_segment")
-            .reset_index()
+            pd.DataFrame(self.params["segment"]).T.rename_axis("price_segment").reset_index()
         )
-        pack_params = (
-            pd.DataFrame(self.params["pack"]).T.rename_axis("pack").reset_index()
-        )
-        size_params = (
-            pd.DataFrame(self.params["size"]).T.rename_axis("size").reset_index()
-        )
+        pack_params = pd.DataFrame(self.params["pack"]).T.rename_axis("pack").reset_index()
+        size_params = pd.DataFrame(self.params["size"]).T.rename_axis("size").reset_index()
 
-        pack_size_params = pack_params.merge(
-            size_params, how="cross", suffixes=("_pack", "_size")
-        )
+        pack_size_params = pack_params.merge(size_params, how="cross", suffixes=("_pack", "_size"))
 
         params = (
             sku_list.merge(brand_params, how="left")
@@ -283,15 +242,9 @@ class SyntheticData(BaseSyntheticData):
             .merge(pack_size_params, how="left")
         )
 
-        params["base_value"] = random_data_generator(
-            params.shape[0], 2, 5, 100000, dist="beta"
-        )
-        params["base_price"] = params.apply(
-            lambda x: np.random.uniform(*x.price_range), axis=1
-        )
-        params["base_price"] *= (
-            params.price_multiplier_pack * params.price_multiplier_size
-        )
+        params["base_value"] = random_data_generator(params.shape[0], 2, 5, 100000, dist="beta")
+        params["base_price"] = params.apply(lambda x: np.random.uniform(*x.price_range), axis=1)
+        params["base_price"] *= params.price_multiplier_pack * params.price_multiplier_size
         params["discount_sensitivity"] *= (
             params.discount_multiplier_pack * params.discount_multiplier_size
         )
@@ -309,12 +262,8 @@ class SyntheticData(BaseSyntheticData):
 
         df = self.generator_dict["brand"].to_frame()
 
-        discount_data = self["sales_data"][
-            [*self.time_columns, "brand", "total_discount"]
-        ]
-        discount_data = discount_data.groupby(
-            [*self.time_columns, "brand"]
-        ).total_discount.sum()
+        discount_data = self["sales_data"][[*self.time_columns, "brand", "total_discount"]]
+        discount_data = discount_data.groupby([*self.time_columns, "brand"]).total_discount.sum()
         discount_data = discount_data.groupby("brand").mean().values
 
         df["discount"] = discount_data * random_data_generator(
@@ -326,12 +275,8 @@ class SyntheticData(BaseSyntheticData):
         """Create pack-specific discount constraints"""
         df = self.generator_dict["pack"].to_frame()
 
-        discount_data = self["sales_data"][
-            [*self.time_columns, "pack", "total_discount"]
-        ]
-        discount_data = discount_data.groupby(
-            [*self.time_columns, "pack"]
-        ).total_discount.sum()
+        discount_data = self["sales_data"][[*self.time_columns, "pack", "total_discount"]]
+        discount_data = discount_data.groupby([*self.time_columns, "pack"]).total_discount.sum()
         discount_data = discount_data.groupby("pack").mean().values
 
         df["discount"] = discount_data * random_data_generator(
@@ -343,12 +288,8 @@ class SyntheticData(BaseSyntheticData):
         """Create segment-specific discount constraints."""
         df = self.generator_dict["price_segment"].to_frame()
 
-        discount_data = self["sales_data"].merge(
-            self["brand_segment_mapping"], how="left"
-        )
-        discount_data = discount_data[
-            [*self.time_columns, "price_segment", "total_discount"]
-        ]
+        discount_data = self["sales_data"].merge(self["brand_segment_mapping"], how="left")
+        discount_data = discount_data[[*self.time_columns, "price_segment", "total_discount"]]
         discount_data = discount_data.groupby(
             [*self.time_columns, "price_segment"]
         ).total_discount.sum()
@@ -363,10 +304,6 @@ class SyntheticData(BaseSyntheticData):
         """Create volume variation constraints."""
         df = self["sales_data"][["sku", "brand"]].drop_duplicates()
 
-        df["min_volume_variation"] = random_data_generator(
-            df.shape[0], 0.7, 1, 1, dist="uniform"
-        )
-        df["max_volume_variation"] = random_data_generator(
-            df.shape[0], 1, 1.3, 1, dist="uniform"
-        )
+        df["min_volume_variation"] = random_data_generator(df.shape[0], 0.7, 1, 1, dist="uniform")
+        df["max_volume_variation"] = random_data_generator(df.shape[0], 1, 1.3, 1, dist="uniform")
         return df

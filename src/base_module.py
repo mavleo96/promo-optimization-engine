@@ -59,12 +59,8 @@ class BaseModuleClass(nn.Module):
         assert 0 < hier_dim < len(shape)
         global_shape = (*shape[:hier_dim], 1, *shape[hier_dim + 1 :])
 
-        global_var = self.create_var(
-            global_shape, dtype=dtype, activation=activation, track=True
-        )
-        hier_var = self.create_var(
-            shape, dtype=dtype, activation=activation, track=False
-        )
+        global_var = self.create_var(global_shape, dtype=dtype, activation=activation, track=True)
+        hier_var = self.create_var(shape, dtype=dtype, activation=activation, track=False)
 
         self.hier_params.append(hier_var)
 

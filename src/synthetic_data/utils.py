@@ -63,8 +63,7 @@ def random_map_join_data(
         [
             dlist[0],  # First element is the base dataframe
             *[  # Remaining elements are randomly sampled
-                i.sample(n=len(dlist[0]), replace=True, ignore_index=True)
-                for i in dlist[1:]
+                i.sample(n=len(dlist[0]), replace=True, ignore_index=True) for i in dlist[1:]
             ],
         ],
         axis=1,

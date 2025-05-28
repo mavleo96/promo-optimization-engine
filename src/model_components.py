@@ -32,9 +32,7 @@ class BaselineLayer(BaseModuleClass):
             (1, hier_shape), 1, activation="tanh"
         )
 
-    def forward(
-        self, time_index: torch.Tensor, sales_lag: torch.Tensor
-    ) -> torch.Tensor:
+    def forward(self, time_index: torch.Tensor, sales_lag: torch.Tensor) -> torch.Tensor:
         # Calculate the baseline using the linear equation
 
         # Baseline sales is defined as a linear function of time and sales_lag
@@ -81,17 +79,11 @@ class MixedEffectLayer(BaseModuleClass):
         # Mixed effect is defined as a non-linear function of the macro variables
         # ME = 1 + tanh(param * variable)
         mixed_effect = 1 + F.tanh(
-            (
-                self.me_mult_param.apply_activation()
-                + self.me_mult_param_hier.apply_activation()
-            )
+            (self.me_mult_param.apply_activation() + self.me_mult_param_hier.apply_activation())
             * macro
         )
         roi_mult = 1 + F.tanh(
-            (
-                self.roi_mult_param.apply_activation()
-                + self.roi_mult_param_hier.apply_activation()
-            )
+            (self.roi_mult_param.apply_activation() + self.roi_mult_param_hier.apply_activation())
             * mixed_effect
         )
         return mixed_effect, roi_mult
@@ -115,9 +107,7 @@ class DiscountLayer(BaseModuleClass):
 
     def forward(self, discount: torch.Tensor) -> torch.Tensor:
         # Discount uplift is defined as a linear function of the discount
-        uplift = (
-            self.slope.apply_activation() + self.slope_hier.apply_activation()
-        ) * discount
+        uplift = (self.slope.apply_activation() + self.slope_hier.apply_activation()) * discount
         return uplift
 
 

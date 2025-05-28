@@ -50,9 +50,7 @@ class Dataset:
         self.raw_macro_data = self.read_csv("macro_data")
         self.raw_brand_constraint = self.read_csv("maximum_brand_discount_constraint")
         self.raw_pack_constraint = self.read_csv("maximum_pack_discount_constraint")
-        self.raw_segment_constraint = self.read_csv(
-            "maximum_segment_discount_constraint"
-        )
+        self.raw_segment_constraint = self.read_csv("maximum_segment_discount_constraint")
         self.raw_volume_constraint = self.read_csv("volume_variation_constraint")
 
     def read_csv(self, filename: str) -> pd.DataFrame:
@@ -80,12 +78,8 @@ class Dataset:
             df.loc[:, col_key] = df[col_key].map(label_dict[col_key])
             return df.set_index(col_key).to_dict()[col_val]
 
-        label_dict = {
-            col: label_encoder(master_mapping[col]) for col in master_mapping.columns
-        }
-        mapper_dict = {
-            col: mapper(col) for col in master_mapping.columns if col != "sku"
-        }
+        label_dict = {col: label_encoder(master_mapping[col]) for col in master_mapping.columns}
+        mapper_dict = {col: mapper(col) for col in master_mapping.columns if col != "sku"}
         sales_index = pd.date_range(
             self.raw_sales_data.date.min(), self.raw_sales_data.date.max(), freq="MS"
         )
@@ -145,14 +139,10 @@ class Dataset:
     def process_macro_data(self) -> None:
         self.macro_data = self.raw_macro_data.copy(deep=True)
         self.macro_data = self.macro_data.set_index("date").reindex(self.sales_index)
-        self.macro_data = self.macro_data.interpolate(
-            method="linear", limit_direction="both"
-        )
+        self.macro_data = self.macro_data.interpolate(method="linear", limit_direction="both")
 
         # Feature selected from the macro data based on correlation with sales and multicollinearity
-        self.macro_data = self.macro_data.loc[
-            :, self.encodings["label_dict"]["macro"].keys()
-        ]
+        self.macro_data = self.macro_data.loc[:, self.encodings["label_dict"]["macro"].keys()]
         # TODO: add covid flags here
 
     def normalize_data(self) -> None:
@@ -171,9 +161,7 @@ class Dataset:
         self.macro = np.expand_dims(self.macro, 1)
 
         self.discount = np.array(self.discount_data / self.scaler)
-        self.discount = self.discount.reshape(
-            len(self.sales_index), len(self.sku_list), -1
-        )
+        self.discount = self.discount.reshape(len(self.sales_index), len(self.sku_list), -1)
 
     def create_tensors(self) -> TensorDataset:
         # Create a tensor dataset
@@ -201,8 +189,6 @@ class Dataset:
         train_loader = DataLoader(
             train_dataset, batch_size=batch_size, shuffle=True, *args, **kwargs
         )
-        val_loader = DataLoader(
-            val_dataset, batch_size=batch_size, shuffle=False, *args, **kwargs
-        )
+        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, *args, **kwargs)
 
         return train_loader, val_loader

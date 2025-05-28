@@ -7,12 +7,7 @@ from torch.utils.data import TensorDataset
 
 from .dataset import Dataset
 from .loss import HierarchicalLoss
-from .model_components import (
-    BaselineLayer,
-    DiscountLayer,
-    MixedEffectLayer,
-    VolumeConversion,
-)
+from .model_components import BaselineLayer, DiscountLayer, MixedEffectLayer, VolumeConversion
 
 
 class HierarchicalRegressionModel(L.LightningModule):
@@ -25,13 +20,9 @@ class HierarchicalRegressionModel(L.LightningModule):
         self.baseline_init = dataset.base_init
 
         # Initialize layers as nn.ModuleList to ensure proper parameter registration
-        self.baseline_layer = BaselineLayer(
-            hier_shape=self.n_sku, baseline_init=self.baseline_init
-        )
+        self.baseline_layer = BaselineLayer(hier_shape=self.n_sku, baseline_init=self.baseline_init)
         self.me_layer = MixedEffectLayer(hier_shape=self.n_sku, n_macro=self.n_macro)
-        self.discount_layer = DiscountLayer(
-            hier_shape=self.n_sku, n_types=self.n_discount_type
-        )
+        self.discount_layer = DiscountLayer(hier_shape=self.n_sku, n_types=self.n_discount_type)
         self.convert_to_volume = VolumeConversion(hier_shape=self.n_sku)
 
         self.global_params = [
