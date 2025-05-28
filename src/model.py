@@ -2,15 +2,17 @@ from typing import Tuple
 
 import lightning as L
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.optim import Adam
+from torch.optim import AdamW
 from torch.utils.data import TensorDataset
 
-from src.dataset import Dataset
-from src.loss import HierarchicalLoss
-from src.model_components import (BaselineLayer, DiscountLayer,
-                                  MixedEffectLayer, VolumeConversion)
+from .dataset import Dataset
+from .loss import HierarchicalLoss
+from .model_components import (
+    BaselineLayer,
+    DiscountLayer,
+    MixedEffectLayer,
+    VolumeConversion,
+)
 
 
 class HierarchicalRegressionModel(L.LightningModule):
@@ -47,19 +49,19 @@ class HierarchicalRegressionModel(L.LightningModule):
         self.loss_fn = HierarchicalLoss()
 
     def forward(self, x: TensorDataset) -> Tuple[torch.Tensor, torch.Tensor]:
-        _, _, _, time_index, nr_lag, macro, discount = x
+        _, _, _, time_index, sales_lag, macro, discount = x
 
         # Use layers from ModuleList
-        baseline = self.baseline_layer(time_index, nr_lag)
+        baseline = self.baseline_layer(time_index, sales_lag)
         mixed_effect, roi_mult = self.me_layer(macro)
         discount_uplift = self.discount_layer(discount)
 
-        nr_pred = baseline * torch.prod(mixed_effect, dim=2) + torch.sum(
+        sales_pred = baseline * torch.prod(mixed_effect, dim=2) + torch.sum(
             discount_uplift, dim=2
         ) * torch.prod(roi_mult, dim=2)
-        volume_pred = self.convert_to_volume(nr_pred)
+        volume_pred = self.convert_to_volume(sales_pred)
 
-        return nr_pred, volume_pred
+        return sales_pred, volume_pred
 
     def training_step(self, batch: TensorDataset) -> torch.Tensor:
         y, y_vol, mask, _, _, _, _ = batch
@@ -86,5 +88,5 @@ class HierarchicalRegressionModel(L.LightningModule):
         return loss
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
-        optimizer = Adam(self.parameters(), lr=0.01)
+        optimizer = AdamW(self.parameters(), lr=0.01, weight_decay=0.0)
         return optimizer

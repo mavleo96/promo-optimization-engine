@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 from numpy.typing import NDArray
 
-from src.base_module import BaseModuleClass
+from .base_module import BaseModuleClass
 
 
 class BaselineLayer(BaseModuleClass):
@@ -32,11 +32,13 @@ class BaselineLayer(BaseModuleClass):
             (1, hier_shape), 1, activation="tanh"
         )
 
-    def forward(self, time_index: torch.Tensor, nr_lag: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, time_index: torch.Tensor, sales_lag: torch.Tensor
+    ) -> torch.Tensor:
         # Calculate the baseline using the linear equation
 
-        # Baseline sales is defined as a linear function of time and nr_lag
-        # Baseline = intercept + slope1 * time_index + slope2 * nr_lag
+        # Baseline sales is defined as a linear function of time and sales_lag
+        # Baseline = intercept + slope1 * time_index + slope2 * sales_lag
         baseline = (
             self.baseline_intercept.apply_activation()
             + (
@@ -48,7 +50,7 @@ class BaselineLayer(BaseModuleClass):
                 self.baseline_weight2.apply_activation()
                 + self.baseline_weight2_hier.apply_activation()
             )
-            * nr_lag
+            * sales_lag
         )
         return baseline
 
@@ -130,18 +132,10 @@ class VolumeConversion(BaseModuleClass):
         super().__init__()
         assert hier_shape > 0, "Hierarchy shape must be positive"
 
-        self.slope, self.slope_hier = self.create_hier_var(
-            (1, hier_shape), 1, activation="sigmoid"
-        )
-        self.intercept, self.intercept_hier = self.create_hier_var(
-            (1, hier_shape), 1, activation="tanh"
-        )
+        self.slope = self.create_var((1, hier_shape), activation="sigmoid")
+        self.intercept = self.create_var((1, hier_shape), activation="tanh")
 
     def forward(self, nr: torch.Tensor) -> torch.Tensor:
         # Volume conversion is defined as a linear function of the net revenue
-        volume = (
-            self.slope.apply_activation() + self.slope_hier.apply_activation()
-        ) * nr + (
-            self.intercept.apply_activation() + self.intercept_hier.apply_activation()
-        )
+        volume = self.slope.apply_activation() * nr + self.intercept.apply_activation()
         return volume

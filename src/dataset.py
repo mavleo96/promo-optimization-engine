@@ -122,16 +122,16 @@ class Dataset:
             .reindex(self.encodings["sales_index"])
             .fillna(0)
         )
-        self.nr_data = sales_data["net_revenue"].clip(lower=0).fillna(0.0)
-        self.nr_lag_data = (
-            sales_data["net_revenue"]
+        self.sales_data = sales_data["gto"].clip(lower=0).fillna(0.0)
+        self.sales_lag_data = (
+            sales_data["gto"]
             .shift(1)
             .clip(lower=0)
             .bfill()
             .mean(axis=1)
             # TODO: resolve overloading
         )
-        self.mask = (self.nr_data >= 0.0).values
+        self.mask = (self.sales_data >= 0.0).values
 
         self.volume_data = sales_data["volume_hl"].clip(lower=0).fillna(0)
         self.discount_data = (
@@ -139,7 +139,7 @@ class Dataset:
             .swaplevel(0, 1, axis=1)
             .sort_index(axis=1)
         )
-        self.base_init = self.nr_data.mean(axis=0)
+        self.base_init = self.sales_data.mean(axis=0)
         self.time_index = np.arange(len(self.sales_index)).reshape(-1, 1)
 
     def process_macro_data(self) -> None:
@@ -156,13 +156,13 @@ class Dataset:
         # TODO: add covid flags here
 
     def normalize_data(self) -> None:
-        self.scaler = self.nr_data.mean(axis=None)
+        self.scaler = self.sales_data.mean(axis=None)
         self.vol_scaler = self.volume_data.mean(axis=None)
         self.macro_scaler = self.macro_data.mean()
 
-        self.nr = (self.nr_data / self.scaler).values
-        self.nr_lag = np.array(self.nr_lag_data / self.scaler)
-        self.nr_lag = np.expand_dims(self.nr_lag, 1)
+        self.sales = (self.sales_data / self.scaler).values
+        self.sales_lag = np.array(self.sales_lag_data / self.scaler)
+        self.sales_lag = np.expand_dims(self.sales_lag, 1)
         self.base_init = np.array(self.base_init / self.scaler)
         self.base_init = np.expand_dims(self.base_init, 0)
 
@@ -178,22 +178,22 @@ class Dataset:
     def create_tensors(self) -> TensorDataset:
         # Create a tensor dataset
         return TensorDataset(
-            torch.tensor(self.nr, dtype=torch.float32),
+            torch.tensor(self.sales, dtype=torch.float32),
             torch.tensor(self.volume, dtype=torch.float32),
             torch.tensor(self.mask, dtype=torch.bool),
             torch.tensor(self.time_index, dtype=torch.float32),
-            torch.tensor(self.nr_lag, dtype=torch.float32),
+            torch.tensor(self.sales_lag, dtype=torch.float32),
             torch.tensor(self.macro, dtype=torch.float32),
             torch.tensor(self.discount, dtype=torch.float32),
         )
 
     def train_test_split(
-        self, train_size: float = 0.75, batch_size: int = 1024, *args, **kwargs
+        self, train_ratio: float = 0.75, batch_size: int = 1024, *args, **kwargs
     ) -> Tuple[DataLoader, DataLoader]:
-        if not 0 < train_size < 1:
-            raise ValueError("train_size must be between 0 and 1")
+        if not 0 < train_ratio < 1:
+            raise ValueError("train_ratio must be between 0 and 1")
 
-        train_size = int(train_size * len(self.tensor_dataset))
+        train_size = int(train_ratio * len(self.tensor_dataset))
 
         train_dataset = TensorDataset(*self.tensor_dataset[:train_size])
         val_dataset = TensorDataset(*self.tensor_dataset[train_size:])
