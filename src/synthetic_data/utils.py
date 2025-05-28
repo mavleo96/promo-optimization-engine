@@ -71,37 +71,6 @@ def random_map_join_data(
     )
 
 
-def rolling_mean(var, window):
-    """Method to calculate the rolling mean of an array"""
-    width = [(window - 1, 0)] + [(0, 0) for _ in range(var.ndim - 1)]
-    var = np.pad(var, width, mode="edge")
-    var = np.lib.stride_tricks.sliding_window_view(var, window, axis=0)
-    return var.mean(axis=-1)
-
-
-def seasonality(freq, scale):
-    """Method to calculate the seasonal component for a given frequency and scale"""
-    scale = np.asarray(scale)
-    base = np.sin(2 * np.pi * freq - np.pi / 2)
-    if scale.ndim == 0:
-        return 1 + base * scale
-    else:
-        base = base[:, np.newaxis]
-        scale = scale[np.newaxis, :]
-        return 1 + base * scale
-
-
-def trend(time, scale):
-    """Method to calculate the trend component for a given time and scale"""
-    scale = np.asarray(scale)
-    if scale.ndim == 0:
-        return 1 + scale * time
-    else:
-        time = time[:, np.newaxis]
-        scale = scale[np.newaxis, :]
-        return 1 + scale * time
-
-
 def get_categorical_columns(df: pd.DataFrame) -> List[str]:
     """Method to get the categorical columns of a dataframe"""
     return df.select_dtypes(exclude=["float", "int"]).columns.tolist()

@@ -112,4 +112,4 @@ class BaseSyntheticData(dict):
             path = Path(path)
 
         for data_name, data in self.items():
-            data.to_csv(path / f"{data_name}.csv", index=False)
+            data.round(3).to_csv(path / f"{data_name}.csv", index=False)
