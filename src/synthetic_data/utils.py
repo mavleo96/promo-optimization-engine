@@ -1,6 +1,6 @@
 import random
 import string
-from typing import List, Sequence, Union
+from typing import List, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -9,9 +9,7 @@ from numpy.typing import NDArray
 
 def random_data_generator(
     shape: int,
-    p1: float = 1,
-    p2: float = 1,
-    scale: float = 100,
+    args: Tuple = (1, 1, 100),
     dist: str = "beta",
     sparsity: float = 0,
     round: Union[int, None] = None,
@@ -20,11 +18,14 @@ def random_data_generator(
     Allows for sparsity to be added to the data"""
 
     if dist == "beta":
-        array = np.random.beta(p1, p2, shape) * scale
+        a, b, scale = args
+        array = np.random.beta(a, b, shape) * scale
     elif dist == "normal":
-        array = np.random.normal(p1, p2, shape)
+        loc, scale = args
+        array = np.random.normal(loc, scale, shape)
     elif dist == "uniform":
-        array = np.random.uniform(p1, p2, shape)
+        low, high = args
+        array = np.random.uniform(low, high, shape)
 
     if sparsity:
         array = np.where(np.random.binomial(1, sparsity, shape), 0, array)
