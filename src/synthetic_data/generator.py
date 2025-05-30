@@ -271,9 +271,7 @@ class SyntheticData(BaseSyntheticData):
         discount_data = discount_data.groupby([*self.time_columns, "brand"]).total_discount.sum()
         discount_data = discount_data.groupby("brand").mean().values
 
-        df["discount"] = discount_data * random_data_generator(
-            df.shape[0], (1.1, 0.1), dist="normal"
-        )
+        df["discount"] = discount_data * random_data_generator(df.shape[0], (2, 0.1), dist="normal")
         return df
 
     def create_pack_discount_constraint(self) -> pd.DataFrame:
@@ -284,9 +282,7 @@ class SyntheticData(BaseSyntheticData):
         discount_data = discount_data.groupby([*self.time_columns, "pack"]).total_discount.sum()
         discount_data = discount_data.groupby("pack").mean().values
 
-        df["discount"] = discount_data * random_data_generator(
-            df.shape[0], (1.1, 0.1), dist="normal"
-        )
+        df["discount"] = discount_data * random_data_generator(df.shape[0], (2, 0.1), dist="normal")
         return df
 
     def create_segment_discount_constraint(self) -> pd.DataFrame:
@@ -300,15 +296,13 @@ class SyntheticData(BaseSyntheticData):
         ).total_discount.sum()
         discount_data = discount_data.groupby("price_segment").mean().values
 
-        df["discount"] = discount_data * random_data_generator(
-            df.shape[0], (1.1, 0.1), dist="normal"
-        )
+        df["discount"] = discount_data * random_data_generator(df.shape[0], (2, 0.1), dist="normal")
         return df
 
     def create_volume_variation_constraint(self) -> pd.DataFrame:
         """Create volume variation constraints."""
         df = self["sales_data"][["sku", "brand"]].drop_duplicates()
 
-        df["min_volume_variation"] = random_data_generator(df.shape[0], (0.7, 1.0), dist="uniform")
-        df["max_volume_variation"] = random_data_generator(df.shape[0], (1.0, 1.3), dist="uniform")
+        df["min_volume_variation"] = random_data_generator(df.shape[0], (0.5, 0.7), dist="uniform")
+        df["max_volume_variation"] = random_data_generator(df.shape[0], (1.3, 1.5), dist="uniform")
         return df
