@@ -64,8 +64,8 @@ L_{\text{opt}} = -(\text{nr\_increase}) - \lambda_{roi} \cdot \text{roi} + \sum 
 ```
 
 where:
-- $\text{nr\_increase}$ is the increase in net revenue
-- $\text{roi}$ is the return on investment
+- 'nr_increase' is the increase in net revenue
+- 'roi' is the return on investment
 - $L_c$ are constraint losses for:
   - Brand-level discount limits
   - Pack-type discount limits
