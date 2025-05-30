@@ -1,7 +1,7 @@
 # Promo Optimization Engine
 
 ## What's This?
-A promo optimization solution we built for the **AB InBev global analytics hackathon**! This repo contains our refactored version.
+A promo optimization solution we built for the **AB InBev Global Analytics Hackathon**! This repo contains our refactored version.
 
 ## Team: Simpson's Paradox
 - Vijayabharathi Murugan
