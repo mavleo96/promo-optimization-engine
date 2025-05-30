@@ -4,6 +4,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from .constants import EPS
+from .utils import tensor_gather
+
 MSE_LAMBDA = 0.01
 VOL_LAMBDA = 1.0
 REG_LAMBDA = 0.0
@@ -43,7 +46,7 @@ class HierarchicalLoss(nn.Module):
         vol_loss = smooth_loss(y_vol_hat, y_vol, mask)
 
         l2_loss = torch.tensor([i.square().sum() for i in global_params]).sum()
-        # hierarchical loss is mean instead of sum to avoid greater penalty on higher levels
+        # Note: Hierarchical loss is averaged instead of summed to avoid penalizing higher number of hierarchies
         hier_loss = torch.tensor([i.square().mean() for i in hier_params]).sum()
 
         total_loss = (
@@ -56,4 +59,92 @@ class HierarchicalLoss(nn.Module):
             "l2_loss": l2_loss.item(),
             "hier_loss": hier_loss.item(),
             "total_loss": total_loss.item(),
+        }
+
+
+ROI_LAMBDA = 10
+NEGATIVE_DISCOUNT_LAMBDA = 1000
+BRAND_CONSTRAINT_LAMBDA = 1000
+PACK_CONSTRAINT_LAMBDA = 1000
+PRICE_SEGMENT_CONSTRAINT_LAMBDA = 1000
+VOLUME_VARIATION_CONSTRAINT_LAMBDA = 1000
+
+
+class ROILoss(nn.Module):
+    """
+    This loss function is used to optimize the ROI of the promotions.
+
+    Loss Components:
+    - ROI
+    - Increase in Sales
+    - Negative Discount
+    - Brand Constraint
+    - Pack Constraint
+    - Price Segment Constraint
+    - Volume Variation Constraint
+    """
+
+    def __init__(
+        self,
+        constraint_tensors: Dict[str, torch.Tensor],
+        gather_indices: Dict[str, torch.Tensor],
+    ):
+        super().__init__()
+
+        self.register_buffer("brand_constraint", constraint_tensors["brand"])
+        self.register_buffer("pack_constraint", constraint_tensors["pack"])
+        self.register_buffer("price_segment_constraint", constraint_tensors["price_segment"])
+        self.register_buffer("volume_variation_constraint", constraint_tensors["volume_variation"])
+
+        self.register_buffer("brand_gather_indices", gather_indices["brand"])
+        self.register_buffer("pack_gather_indices", gather_indices["pack"])
+        self.register_buffer("price_segment_gather_indices", gather_indices["price_segment"])
+
+    def forward(
+        self,
+        discount_spend: torch.Tensor,
+        opt_sales: torch.Tensor,
+        init_sales: torch.Tensor,
+        opt_vol: torch.Tensor,
+    ) -> Tuple[torch.Tensor, Dict[str, float]]:
+        roi = (opt_sales.sum() - init_sales.sum()) / (discount_spend.sum() + EPS)
+        nr_increase = opt_sales.sum() - init_sales.sum()
+        negative_discount_loss = F.relu(-discount_spend).sum()
+
+        # Constrain Loss
+        discount_brand = tensor_gather(discount_spend, self.brand_gather_indices, dim=1).sum(2)  # type: ignore
+        discount_pack = tensor_gather(discount_spend, self.pack_gather_indices, dim=1).sum(2)  # type: ignore
+        discount_price_segment = tensor_gather(
+            discount_spend, self.price_segment_gather_indices, dim=1  # type: ignore
+        ).sum(2)
+
+        brand_constraint_loss = F.relu(discount_brand - self.brand_constraint).sum()  # type: ignore
+        pack_constraint_loss = F.relu(discount_pack - self.pack_constraint).sum()  # type: ignore
+        price_segment_constraint_loss = F.relu(
+            discount_price_segment - self.price_segment_constraint  # type: ignore
+        ).sum()
+
+        # Volume Variation Loss
+        lower_constraint = self.volume_variation_constraint[[0]]  # type: ignore
+        upper_constraint = self.volume_variation_constraint[[1]]  # type: ignore
+        volume_variation_loss = F.relu(opt_vol - opt_vol * upper_constraint).sum()
+        volume_variation_loss += F.relu(opt_vol * lower_constraint - opt_vol).sum()
+
+        loss = (
+            -nr_increase
+            - ROI_LAMBDA * roi
+            + NEGATIVE_DISCOUNT_LAMBDA * negative_discount_loss
+            + BRAND_CONSTRAINT_LAMBDA * brand_constraint_loss
+            + PACK_CONSTRAINT_LAMBDA * pack_constraint_loss
+            + PRICE_SEGMENT_CONSTRAINT_LAMBDA * price_segment_constraint_loss
+            + VOLUME_VARIATION_CONSTRAINT_LAMBDA * volume_variation_loss
+        )
+        return loss, {
+            "optimized_roi": roi.item(),
+            "nr_increase": nr_increase.item(),
+            "negative_discount_loss": negative_discount_loss.item(),
+            "brand_constraint_loss": brand_constraint_loss.item(),
+            "pack_constraint_loss": pack_constraint_loss.item(),
+            "price_segment_constraint_loss": price_segment_constraint_loss.item(),
+            "volume_variation_loss": volume_variation_loss.item(),
         }
