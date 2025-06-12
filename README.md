@@ -1,7 +1,7 @@
 # Promotion Optimization Engine
-### ABInBev Global Analytics Hackathon: Team - Simpson's Paradox
+### AB InBev Global Analytics Hackathon: Team - Simpson's Paradox
 
-This project implements a hierarchical regression model for promotion optimization, developed during the **ABInBev Global Analytics Hackathon**. The solution focuses on optimizing promotional spend allocation across a multi-level product hierarchy (brand, price segment, pack type, size, and SKU) while respecting business constraints. **Our team placed 7th globally out of 150+ teams in the competition.**
+This project implements a hierarchical regression model for promotion optimization, developed during the **AB InBev Global Analytics Hackathon**. The solution focuses on optimizing promotional spend allocation across a multi-level product hierarchy (brand, price segment, pack type, size, and SKU) while respecting business constraints. **Our team placed 7th globally out of 150+ teams in the competition.**
 
 ## Model Architecture
 
