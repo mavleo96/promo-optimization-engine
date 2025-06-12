@@ -27,6 +27,19 @@ class SyntheticData(BaseSyntheticData):
         self._initialize_generator_dict()
         self.params = self._initialize_params()
 
+        covid_start = (
+            (self.time_config["covid_start"]["year"] - self.time_config["start"]["year"]) * 12
+            + self.time_config["covid_start"]["month"]
+            - 1
+        )
+        covid_end = (
+            (self.time_config["covid_end"]["year"] - self.time_config["start"]["year"]) * 12
+            + self.time_config["covid_end"]["month"]
+            - 1
+        )
+        self.covid_mask = np.zeros(len(self.time_data), dtype=bool)
+        self.covid_mask[covid_start : covid_end + 1] = True
+
     def _initialize_generator_dict(self) -> None:
         """Initialize the dictionary of random string lists for different entities."""
         self.generator_dict["sku"] = random_string_list("sku", 1000)
@@ -154,6 +167,12 @@ class SyntheticData(BaseSyntheticData):
 
         df["me_effect"] = df[var_names].apply(pertubate_func, mult=me_mult).prod(axis=1)
         df["roi_mult"] = df[var_names].apply(pertubate_func, mult=roi_mult).prod(axis=1)
+
+        # Covid impact added to me_effect and roi_mult
+        covid_impact = random_data_generator(df.shape[0], (0.1, 0.2), dist="uniform")
+        mask = np.tile(self.covid_mask, len(df) // len(self.covid_mask))
+        df.loc[mask, "me_effect"] *= 1 - covid_impact[mask]
+        df.loc[mask, "roi_mult"] *= 1 - covid_impact[mask] * 0.5
 
         return df[[*self.time_columns, "me_effect", "roi_mult"]]
 

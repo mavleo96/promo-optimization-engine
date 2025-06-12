@@ -39,10 +39,14 @@ class PredictionSaverCallback(L.Callback):
         for logger in trainer.loggers:
             if isinstance(logger, TensorBoardLogger):
                 logger.experiment.add_scalar(
-                    "total_sales_wmape", sales_wmape.item(), global_step=trainer.global_step
+                    "total_sales_wmape",
+                    sales_wmape.item(),
+                    global_step=trainer.global_step,
                 )
                 logger.experiment.add_scalar(
-                    "total_volume_wmape", volume_wmape.item(), global_step=trainer.global_step
+                    "total_volume_wmape",
+                    volume_wmape.item(),
+                    global_step=trainer.global_step,
                 )
 
                 plt.figure(figsize=(12, 6))
@@ -67,7 +71,9 @@ class PredictionSaverCallback(L.Callback):
                 plt.legend()
 
                 logger.experiment.add_figure(
-                    "total_volume_comparison", plt.gcf(), global_step=trainer.global_step
+                    "total_volume_comparison",
+                    plt.gcf(),
+                    global_step=trainer.global_step,
                 )
                 plt.close()
 
@@ -81,7 +87,9 @@ class WeightSaverCallback(L.Callback):
             if isinstance(logger, TensorBoardLogger):
                 for name, param in pl_module.named_parameters():
                     logger.experiment.add_histogram(
-                        f"weights/{name}", param.data.cpu(), global_step=trainer.global_step
+                        f"weights/{name}",
+                        param.data.cpu(),
+                        global_step=trainer.global_step,
                     )
 
 
@@ -113,6 +121,8 @@ class OptimizationCallback(L.Callback):
                 score = (sales_wmape + roi) * 100
 
                 logger.experiment.add_scalar(
-                    "final_sales_wmape", sales_wmape.item(), global_step=trainer.global_step
+                    "final_sales_wmape",
+                    sales_wmape.item(),
+                    global_step=trainer.global_step,
                 )
                 logger.experiment.add_scalar("score", score.item(), global_step=trainer.global_step)

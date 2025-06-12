@@ -94,6 +94,7 @@ class Dataset:
             "gross_domestic_saving": 1,
             "retail_sales_index": 2,
             "unemployment_rate": 3,
+            "covid": 4,
         }
 
         return {
@@ -158,9 +159,13 @@ class Dataset:
         self.macro_data = self.macro_data.set_index("date").reindex(self.sales_index)
         self.macro_data = self.macro_data.interpolate(method="linear", limit_direction="both")
 
+        covid_start, covid_end = pd.Timestamp("2020-03-01"), pd.Timestamp("2020-05-31")
+        self.macro_data["covid"] = (self.sales_index >= covid_start) & (
+            self.sales_index <= covid_end
+        )
+
         # Feature selected from the macro data based on correlation with sales and multicollinearity
         self.macro_data = self.macro_data.loc[:, self.encodings["label_dict"]["macro"].keys()]
-        # TODO: add covid flags here
 
     def process_constraint_data(self) -> None:
         self.brand_constraint_data = self.raw_brand_constraint_data.set_index("brand").sort_index()
@@ -176,6 +181,7 @@ class Dataset:
         self.scaler = self.sales_data.mean(axis=None)
         self.vol_scaler = self.volume_data.mean(axis=None)
         self.macro_scaler = self.macro_data.mean()
+        self.macro_scaler["covid"] = 1.0
 
         self.sales = (self.sales_data / self.scaler).values
         self.sales_lag = np.array(self.sales_lag_data / self.scaler)
