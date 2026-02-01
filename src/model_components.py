@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import torch
 import torch.nn.functional as F
 from numpy.typing import NDArray
@@ -74,8 +72,7 @@ class MixedEffectLayer(BaseModuleClass):
             (1, hier_shape, n_macro), 1, activation="tanh"
         )
 
-    def forward(self, macro: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-
+    def forward(self, macro: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         # Mixed effect is defined as a non-linear function of the macro variables
         # ME = 1 + tanh(param * variable)
         mixed_effect = 1 + F.tanh(

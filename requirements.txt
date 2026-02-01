@@ -1,8 +1,7 @@
-lightning>=2.5.0
-torch>=2.5.0
-numpy>=2.2.0
-pandas>=2.2.0
-matplotlib>=3.10.0
-black>=25.1.0
-isort>=6.0.0
-tensorboard>=2.19.0
+lightning==2.6.1
+torch==2.6.0
+numpy==2.3.2
+pandas==2.3.0
+matplotlib==3.10.1
+tensorboard==2.20.0
+ruff==0.14.14

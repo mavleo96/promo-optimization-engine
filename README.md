@@ -27,32 +27,32 @@ where:
 
 1. **Baseline Layer** - Predicts base sales using time and lagged sales with hierarchical trend and seasonality effects
    ```math
-   \text{baseline} = \sigma(\text{intercept}) + (\tanh(w_1) + \tanh(w_1^h)) \cdot \alpha t + (\tanh(w_2) + \tanh(w_2^h)) \cdot \text{sales\_lag}
+   \mathit{baseline} = \sigma(\mathit{intercept}) + (\tanh(w_1) + \tanh(w_1^h)) \cdot \alpha t + (\tanh(w_2) + \tanh(w_2^h)) \cdot \mathit{sales\_lag}
    ```
 
 2. **Mixed Effect Layer** - Models macroeconomic impacts and ROI multipliers with hierarchical sensitivity
    ```math
-   \text{mixed\_effect} = 1 + \tanh((w_{me} + w_{me}^h) \cdot \text{macro})
+   \mathit{mixed\_effect} = 1 + \tanh((w_{me} + w_{me}^h) \cdot \mathit{macro})
    ```
    ```math
-   \text{roi\_mult} = 1 + \tanh((w_{roi} + w_{roi}^h) \cdot \text{mixed\_effect})
+   \mathit{roi\_mult} = 1 + \tanh((w_{roi} + w_{roi}^h) \cdot \mathit{mixed\_effect})
    ```
 
 3. **Discount Layer** - Models linear impact of promotional spend with hierarchical sensitivity to different discount types
    ```math
-   \text{uplift} = (\sigma(w_d) + \sigma(w_d^h)) \cdot \text{discount}
+   \mathit{uplift} = (\sigma(w_d) + \sigma(w_d^h)) \cdot \mathit{discount}
    ```
 
 4. **Volume Conversion Layer** - Converts sales predictions to volume using independent conversion parameters
    ```math
-   \text{volume} = \sigma(w_v) \cdot \text{sales} + \tanh(w_i)
+   \mathit{volume} = \sigma(w_v) \cdot \mathit{sales} + \tanh(w_i)
    ```
 
 ### Final Prediction
 
 The final sales prediction combines all components:
 ```math
-\text{sales\_pred} = \text{baseline} \cdot \prod(\text{mixed\_effect}) + \sum(\text{uplift}) \cdot \prod(\text{roi\_mult})
+\mathit{sales\_pred} = \mathit{baseline} \cdot \prod(\mathit{mixed\_effect}) + \sum(\mathit{uplift}) \cdot \prod(\mathit{roi\_mult})
 ```
 
 ### Optimization Engine
@@ -60,12 +60,12 @@ The final sales prediction combines all components:
 The optimization engine maximizes ROI while respecting business constraints:
 
 ```math
-L_{\text{opt}} = -(\text{nr\_increase}) - \lambda_{roi} \cdot \text{roi} + \sum \lambda_c \cdot L_c
+L_{\mathit{opt}} = -(\mathit{nr\_increase}) - \lambda_{roi} \cdot \mathit{roi} + \sum \lambda_c \cdot L_c
 ```
 
 where:
-- 'nr_increase' is the increase in net revenue
-- 'roi' is the return on investment
+- $\mathit{nr\_increase}$ is the increase in net revenue
+- $\mathit{roi}$ is the return on investment
 - $L_c$ are constraint losses for:
   - Brand-level discount limits
   - Pack-type discount limits

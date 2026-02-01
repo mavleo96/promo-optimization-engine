@@ -4,16 +4,21 @@ This module is used to generate synthetic data that follows the model structure
 
 import json
 from pathlib import Path
-from typing import Dict, Tuple, Union
+from typing import Union
 
 import numpy as np
 import pandas as pd
 
 from .base_generator import BaseSyntheticData
-from .utils import cross_join_data, random_data_generator, random_map_join_data, random_string_list
+from .utils import (
+    cross_join_data,
+    random_data_generator,
+    random_map_join_data,
+    random_string_list,
+)
 
-SubParamDict = Dict[str, Dict[str, Union[float, int, str, Tuple]]]
-ParamDict = Dict[str, SubParamDict]
+SubParamDict = dict[str, dict[str, Union[float, int, str, tuple]]]
+ParamDict = dict[str, SubParamDict]
 
 
 class SyntheticData(BaseSyntheticData):
@@ -160,10 +165,11 @@ class SyntheticData(BaseSyntheticData):
         var_names = [i for i in self.data_config["macro_data"] if i not in self.time_columns]
         df = self["macro_data"].copy()
 
-        normalize = lambda x: (x / x.mean() - 1)
-        pertubate_func = lambda x, mult: 1 + np.tanh(x * mult[x.name])
+        # Relative mean normalization
+        df[var_names] = df[var_names].apply(lambda x: (x / x.mean() - 1), axis=0)
 
-        df[var_names] = df[var_names].apply(normalize, axis=0)
+        def pertubate_func(x: pd.Series, mult: dict[str, float]) -> pd.Series:
+            return 1 + np.tanh(x * mult[x.name])
 
         df["me_effect"] = df[var_names].apply(pertubate_func, mult=me_mult).prod(axis=1)
         df["roi_mult"] = df[var_names].apply(pertubate_func, mult=roi_mult).prod(axis=1)

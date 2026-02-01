@@ -1,12 +1,15 @@
-from typing import List, Tuple
-
 import lightning as L
 import torch
 from torch.optim import AdamW
 
 from .dataset import Dataset
 from .loss import HierarchicalRegularizationLoss, RegressionLoss
-from .model_components import BaselineLayer, DiscountLayer, MixedEffectLayer, VolumeConversion
+from .model_components import (
+    BaselineLayer,
+    DiscountLayer,
+    MixedEffectLayer,
+    VolumeConversion,
+)
 
 
 class HierarchicalRegressionModel(L.LightningModule):
@@ -37,7 +40,7 @@ class HierarchicalRegressionModel(L.LightningModule):
         self.hier_loss_fn = HierarchicalRegularizationLoss()
         self.reg_loss_fn = RegressionLoss()
 
-    def forward(self, x: List[torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x: list[torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor]:
         _, _, _, time_index, sales_lag, macro, discount = x
 
         baseline = self.baseline_layer(time_index, sales_lag)
@@ -49,26 +52,26 @@ class HierarchicalRegressionModel(L.LightningModule):
 
         return sales_pred, volume_pred
 
-    def training_step(self, batch: List[torch.Tensor]) -> torch.Tensor:
+    def training_step(self, batch: list[torch.Tensor]) -> torch.Tensor:
         y, y_vol, mask, _, _, _, _ = batch
         y_hat, y_vol_hat = self(batch)
         reg_loss, reg_loss_components = self.reg_loss_fn(y_hat, y, y_vol_hat, y_vol, mask)
         hier_loss, hier_loss_components = self.hier_loss_fn(self.hier_params, self.global_params)
         loss = reg_loss + hier_loss
 
-        self.log_dict({"train_" + k: v for k, v in reg_loss_components.items()})
-        self.log_dict(hier_loss_components)
-        self.log("train_total_loss", loss)
+        self.log_dict({f"train/{k}": v for k, v in reg_loss_components.items()})
+        self.log_dict({f"train/{k}": v for k, v in hier_loss_components.items()})
+        self.log("train/total_loss", loss)
         return loss
 
-    def validation_step(self, batch: List[torch.Tensor]) -> torch.Tensor:
+    def validation_step(self, batch: list[torch.Tensor]) -> torch.Tensor:
         y, y_vol, mask, _, _, _, _ = batch
         y_hat, y_vol_hat = self(batch)
         reg_loss, reg_loss_components = self.reg_loss_fn(y_hat, y, y_vol_hat, y_vol, mask)
 
-        self.log_dict({"val_" + k: v for k, v in reg_loss_components.items()})
+        self.log_dict({f"val/{k}": v for k, v in reg_loss_components.items()})
         return reg_loss
 
-    def configure_optimizers(self) -> torch.optim.Optimizer:
+    def configure_optimizers(self):
         optimizer = AdamW(self.parameters(), lr=0.01)
         return optimizer

@@ -1,5 +1,3 @@
-from typing import List
-
 import lightning as L
 import torch
 from torch import nn
@@ -22,7 +20,9 @@ class OptimizationEngine(L.LightningModule):
 
         # Note: We directly optimize the raw spend tensor
         # However, it is better to optimize the softmax of raw spend tensor to avoid negative values
-        self.register_parameter("optimized_spend", nn.Parameter(self.dataloader.dataset.tensors[6].clone()))  # type: ignore
+        self.register_parameter(
+            "optimized_spend", nn.Parameter(self.dataloader.dataset.tensors[6].clone())
+        )  # type: ignore
 
         self.loss_fn = ROILoss(
             dataset.constraint_tensors,
@@ -32,16 +32,16 @@ class OptimizationEngine(L.LightningModule):
     def forward(self) -> torch.Tensor:
         return self.optimized_spend  # type: ignore
 
-    def training_step(self, batch: List[torch.Tensor]) -> torch.Tensor:
+    def training_step(self, batch: list[torch.Tensor]) -> torch.Tensor:
         init_sales, _ = self.model(batch)
         opt_sales, opt_vol = self.model([*batch[:-1], self.optimized_spend])
 
         loss, metrics = self.loss_fn(self.optimized_spend, opt_sales, init_sales, opt_vol)
-        self.log_dict(metrics)
+        self.log_dict({f"opt/{k}": v for k, v in metrics.items()})
         return loss
 
     def configure_optimizers(self):
-        optimizer = AdamW(self.parameters(), lr=0.001)
+        optimizer = AdamW(self.parameters(), lr=1e-3)
         return optimizer
 
     def train_dataloader(self) -> DataLoader:

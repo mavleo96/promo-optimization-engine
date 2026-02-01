@@ -1,6 +1,6 @@
 import random
 import string
-from typing import List, Sequence, Tuple, Union
+from typing import Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -9,7 +9,7 @@ from numpy.typing import NDArray
 
 def random_data_generator(
     shape: int,
-    args: Tuple = (1, 1, 100),
+    args: tuple = (1, 1, 100),
     dist: str = "beta",
     sparsity: float = 0,
     round: Union[int, None] = None,
@@ -71,11 +71,11 @@ def random_map_join_data(
     )
 
 
-def get_categorical_columns(df: pd.DataFrame) -> List[str]:
+def get_categorical_columns(df: pd.DataFrame) -> list[str]:
     """Method to get the categorical columns of a dataframe"""
     return df.select_dtypes(exclude=["float", "int"]).columns.tolist()
 
 
-def get_numerical_columns(df: pd.DataFrame) -> List[str]:
+def get_numerical_columns(df: pd.DataFrame) -> list[str]:
     """Method to get the numerical columns of a dataframe"""
     return df.select_dtypes(include=["float", "int"]).columns.tolist()

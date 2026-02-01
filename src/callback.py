@@ -39,12 +39,12 @@ class PredictionSaverCallback(L.Callback):
         for logger in trainer.loggers:
             if isinstance(logger, TensorBoardLogger):
                 logger.experiment.add_scalar(
-                    "total_sales_wmape",
+                    "train/total_sales_wmape",
                     sales_wmape.item(),
                     global_step=trainer.global_step,
                 )
                 logger.experiment.add_scalar(
-                    "total_volume_wmape",
+                    "train/total_volume_wmape",
                     volume_wmape.item(),
                     global_step=trainer.global_step,
                 )
@@ -53,12 +53,15 @@ class PredictionSaverCallback(L.Callback):
                 plt.plot(sales_sum.numpy(), label="actual", alpha=0.7)
                 plt.plot(sales_pred_sum.numpy(), label="predicted", alpha=0.7)
                 plt.title("total sales: actual vs predicted")
+                plt.ylim(bottom=0)
                 plt.xlabel("time")
                 plt.ylabel("sales")
                 plt.legend()
 
                 logger.experiment.add_figure(
-                    "total_sales_comparison", plt.gcf(), global_step=trainer.global_step
+                    "train/total_sales_comparison",
+                    plt.gcf(),
+                    global_step=trainer.global_step,
                 )
                 plt.close()
 
@@ -66,12 +69,13 @@ class PredictionSaverCallback(L.Callback):
                 plt.plot(volume_sum.numpy(), label="actual", alpha=0.7)
                 plt.plot(volume_pred_sum.numpy(), label="predicted", alpha=0.7)
                 plt.title("total volume: actual vs predicted")
+                plt.ylim(bottom=0)
                 plt.xlabel("time")
                 plt.ylabel("volume")
                 plt.legend()
 
                 logger.experiment.add_figure(
-                    "total_volume_comparison",
+                    "train/total_volume_comparison",
                     plt.gcf(),
                     global_step=trainer.global_step,
                 )
@@ -118,11 +122,18 @@ class OptimizationCallback(L.Callback):
                     pl_module.optimized_spend.sum().item() + EPS  # type: ignore
                 )
 
-                score = (sales_wmape + roi) * 100
+                score = (1 - sales_wmape + roi) * 100
 
                 logger.experiment.add_scalar(
-                    "final_sales_wmape",
+                    "opt/final_sales_wmape",
                     sales_wmape.item(),
                     global_step=trainer.global_step,
                 )
-                logger.experiment.add_scalar("score", score.item(), global_step=trainer.global_step)
+                logger.experiment.add_scalar(
+                    "opt/final_roi",
+                    roi.item(),
+                    global_step=trainer.global_step,
+                )
+                logger.experiment.add_scalar(
+                    "opt/score", score.item(), global_step=trainer.global_step
+                )

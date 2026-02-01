@@ -5,7 +5,7 @@ This module is used to generate synthetic data
 import json
 import os
 from pathlib import Path
-from typing import Dict, Union
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -14,9 +14,7 @@ from .utils import cross_join_data, random_data_generator, random_string_list
 
 
 class BaseSyntheticData(dict):
-
     def __init__(self, path: Union[str, Path]) -> None:
-
         path = Path(path)
         with open(path / "columns.json", "r") as c:
             self.columns = json.loads(c.read())
@@ -38,8 +36,7 @@ class BaseSyntheticData(dict):
             )
         super().__init__()
 
-    def column_data_generator_dict(self) -> Dict[str, pd.Series]:
-
+    def column_data_generator_dict(self) -> dict[str, pd.Series]:
         generator_dict = {}
         for col, col_config in self.columns.items():
             if col == "year":
@@ -51,9 +48,9 @@ class BaseSyntheticData(dict):
                     name=col,
                 )
             elif col == "month":
-                assert (
-                    self.time_config["start"]["month"] == 1
-                ), "Data generation requires start month to be 1"
+                assert self.time_config["start"]["month"] == 1, (
+                    "Data generation requires start month to be 1"
+                )
                 generator_dict[col] = pd.Series(np.arange(1, 13), name=col)
             elif col_config["type"] == "str":
                 generator_dict[col] = random_string_list(col, 2)

@@ -1,5 +1,3 @@
-from typing import Dict, Tuple
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -27,9 +25,9 @@ class HierarchicalRegularizationLoss(nn.Module):
 
     def forward(
         self, hier_params: nn.ParameterList, global_params: nn.ParameterList
-    ) -> Tuple[torch.Tensor, Dict[str, float]]:
-        l2_loss = torch.tensor([i.square().sum() for i in global_params]).sum()
-        hier_loss = torch.tensor([i.square().mean() for i in hier_params]).sum()
+    ) -> tuple[torch.Tensor, dict[str, float]]:
+        l2_loss = sum(i.square().sum() for i in global_params)
+        hier_loss = sum(i.square().mean() for i in hier_params)
 
         total_loss = HIER_LAMBDA * hier_loss + REG_LAMBDA * l2_loss
         return total_loss, {
@@ -57,12 +55,12 @@ class RegressionLoss(nn.Module):
         y_vol_hat: torch.Tensor,
         y_vol: torch.Tensor,
         mask: torch.Tensor,
-    ) -> Tuple[torch.Tensor, Dict[str, float]]:
+    ) -> tuple[torch.Tensor, dict[str, float]]:
         # Calculate losses with reduction='none' to apply mask manually
-        smooth_loss = (
-            lambda y_hat, y, mask: (F.l1_loss(y_hat, y, reduction="none") * mask).mean()
-            + MSE_LAMBDA * (F.mse_loss(y_hat, y, reduction="none") * mask).mean()
-        )
+        def smooth_loss(y_hat: torch.Tensor, y: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+            return (F.l1_loss(y_hat, y, reduction="none") * mask).mean() + MSE_LAMBDA * (
+                F.mse_loss(y_hat, y, reduction="none") * mask
+            ).mean()
 
         sales_loss = smooth_loss(y_hat, y, mask)
         vol_loss = smooth_loss(y_vol_hat, y_vol, mask)
@@ -99,8 +97,8 @@ class ROILoss(nn.Module):
 
     def __init__(
         self,
-        constraint_tensors: Dict[str, torch.Tensor],
-        gather_indices: Dict[str, torch.Tensor],
+        constraint_tensors: dict[str, torch.Tensor],
+        gather_indices: dict[str, torch.Tensor],
     ):
         super().__init__()
 
@@ -119,7 +117,7 @@ class ROILoss(nn.Module):
         opt_sales: torch.Tensor,
         init_sales: torch.Tensor,
         opt_vol: torch.Tensor,
-    ) -> Tuple[torch.Tensor, Dict[str, float]]:
+    ) -> tuple[torch.Tensor, dict[str, float]]:
         roi = (opt_sales.sum() - init_sales.sum()) / (discount_spend.sum() + EPS)
         nr_increase = opt_sales.sum() - init_sales.sum()
         negative_discount_loss = F.relu(-discount_spend).sum()
@@ -128,7 +126,9 @@ class ROILoss(nn.Module):
         discount_brand = tensor_gather(discount_spend, self.brand_gather_indices, dim=1).sum(2)  # type: ignore
         discount_pack = tensor_gather(discount_spend, self.pack_gather_indices, dim=1).sum(2)  # type: ignore
         discount_price_segment = tensor_gather(
-            discount_spend, self.price_segment_gather_indices, dim=1  # type: ignore
+            discount_spend,
+            self.price_segment_gather_indices,
+            dim=1,  # type: ignore
         ).sum(2)
 
         brand_constraint_loss = F.relu(discount_brand - self.brand_constraint).sum()  # type: ignore

@@ -1,4 +1,4 @@
-from typing import Tuple, Union
+from typing import Union
 
 import torch
 import torch.nn as nn
@@ -33,7 +33,7 @@ class ActivatedParameter(nn.Parameter):
             return self
 
 
-HierarchicalActivatedParams = Tuple[ActivatedParameter, ActivatedParameter]
+HierarchicalActivatedParams = tuple[ActivatedParameter, ActivatedParameter]
 
 
 class BaseModuleClass(nn.Module):
@@ -51,7 +51,7 @@ class BaseModuleClass(nn.Module):
 
     def create_hier_var(
         self,
-        shape: Tuple,
+        shape: tuple,
         hier_dim: int,
         activation: str = "tanh",
         dtype: torch.dtype = torch.float32,
@@ -68,7 +68,7 @@ class BaseModuleClass(nn.Module):
 
     def create_var(
         self,
-        shape: Tuple,
+        shape: tuple,
         activation: str = "tanh",
         dtype: torch.dtype = torch.float32,
         init: Union[NDArray, None] = None,

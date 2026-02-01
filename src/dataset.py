@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Union
 
 import numpy as np
 import pandas as pd
@@ -64,18 +64,18 @@ class Dataset:
             data.drop(columns=["year", "month"], inplace=True)
         return data
 
-    def create_encodings(self) -> Dict[str, Any]:
+    def create_encodings(self) -> dict[str, Any]:
         master_mapping = (
             self.raw_sales_data[["sku", "brand", "pack", "size"]]
             .drop_duplicates()
             .merge(self.raw_segment_mapping)
         )
 
-        def label_encoder(series: pd.Series) -> Dict[str, int]:
+        def label_encoder(series: pd.Series) -> dict[str, int]:
             unique_values = series.sort_values().unique()
             return dict(zip(unique_values, range(len(unique_values))))
 
-        def mapper(col_val: str, col_key: str = "sku") -> Dict[str, int]:
+        def mapper(col_val: str, col_key: str = "sku") -> dict[int, int]:
             nonlocal master_mapping, label_dict
             df = master_mapping[[col_key, col_val]].drop_duplicates()
             df.loc[:, col_val] = df[col_val].map(label_dict[col_val])
@@ -212,7 +212,7 @@ class Dataset:
             torch.tensor(self.discount, dtype=torch.float32),
         )
 
-    def create_gather_indices(self) -> Dict[str, torch.Tensor]:
+    def create_gather_indices(self) -> dict[str, torch.Tensor]:
         return {
             "brand": torch.tensor(
                 [self.encodings["mapper_dict"]["brand"][i] for i in range(self.n_sku)],
@@ -228,7 +228,7 @@ class Dataset:
             ),
         }
 
-    def create_constraint_tensors(self) -> Dict[str, torch.Tensor]:
+    def create_constraint_tensors(self) -> dict[str, torch.Tensor]:
         return {
             "brand": torch.tensor(self.brand_constraint, dtype=torch.float32),
             "pack": torch.tensor(self.pack_constraint, dtype=torch.float32),
@@ -236,7 +236,7 @@ class Dataset:
             "volume_variation": torch.tensor(self.volume_constraint, dtype=torch.float32),
         }
 
-    def train_val_dataloader(self, *args, **kwargs) -> Tuple[DataLoader, DataLoader]:
+    def train_val_dataloader(self, *args, **kwargs) -> tuple[DataLoader, DataLoader]:
         train_size = int(self.n_time - 12)
         val_size = 9
 

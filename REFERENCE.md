@@ -11,7 +11,7 @@ A promo optimization solution we built for the **AB InBev Global Analytics Hacka
 ## Quick Start
 ### What You Need
 - Python 3.12+
-- pip
+- pip 25.0+
 
 ### Get Started
 ```bash
@@ -69,6 +69,11 @@ python main.py [--data_path DATA_PATH] [--epochs EPOCHS] [--opt_epochs OPT_EPOCH
 - `--num_workers`: Number of data loading workers (default: 2)
 
 ## Changelog
+
+### 2026-02-01
+- [TODO] Hierarchical Parameter Class
+- Added learning rate scheduler for model training
+- Style improvements using ruff
 
 ### 2025-05-30
 - Refactored to PyTorch and PyTorch Lightning
