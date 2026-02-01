@@ -1,7 +1,7 @@
 import lightning as L
 import torch
 from torch.optim import AdamW
-
+from torch.optim.lr_scheduler import LambdaLR
 from .dataset import Dataset
 from .loss import HierarchicalRegularizationLoss, RegressionLoss
 from .model_components import (
@@ -74,4 +74,5 @@ class HierarchicalRegressionModel(L.LightningModule):
 
     def configure_optimizers(self):
         optimizer = AdamW(self.parameters(), lr=0.01)
-        return optimizer
+        scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch: (1 + 0.99**epoch) / 2)
+        return [optimizer], [scheduler]

@@ -16,7 +16,7 @@ from src.opt_engine import OptimizationEngine
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_path", type=str, default="./data")
-    parser.add_argument("--epochs", type=int, default=500)
+    parser.add_argument("--epochs", type=int, default=1000)
     parser.add_argument("--opt_epochs", type=int, default=500)
     parser.add_argument("--run_name", type=str, default="default")
     parser.add_argument("--num_workers", type=int, default=2)
