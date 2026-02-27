@@ -3,74 +3,62 @@
 
 This project implements a hierarchical regression model for promotion optimization, developed during the **AB InBev Global Analytics Hackathon**. The solution focuses on optimizing promotional spend allocation across a multi-level product hierarchy (brand, price segment, pack type, size, and SKU) while respecting business constraints. **Our team placed 7th globally out of 150+ teams in the competition.**
 
+---
+
 ## Model Architecture
 
 The model uses a hierarchical parameter structure where each parameter consists of two components:
-1. A global parameter that represents the shared behavior across all SKUs
-2. A hierarchical parameter that captures specific variations for each SKU
+1. A global parameter $w$ that represents the shared behavior across all SKUs
+2. A hierarchical parameter $w^h$ that captures SKU-specific deviations from the global
 
-This structure is implemented through the `BaseModuleClass`, which manages both global and hierarchical parameters. The `ActivatedParameter` class is a wrapper around PyTorch parameters that enables dynamic application of activation functions (tanh, sigmoid, or relu) to the parameters.
+This structure is implemented through the `BaseModuleClass`, which manages both global and hierarchical parameters. The `ActivatedParameter` class wraps PyTorch parameters with configurable activation functions (`tanh`, `sigmoid`, or `relu`).
 
-We enforce the hierarchical structure through hierarchical regularization (instead of KL divergence) to ensure parameters for each SKU come from the same distribution:
+We enforce the hierarchical structure through regularization (instead of KL divergence) to ensure SKU-level parameters stay close to the global distribution:
 
-```math
-L_{\text{hier}} = \lambda_h \sum(w^h)^2 + \lambda_r \sum w^2
-```
+$$\mathcal{L}_{\text{reg}} = \lambda_h \sum_k (w_k^h)^2 + \lambda_r \sum_k w_k^2$$
 
-where:
-- $w^h$ are hierarchical weights
-- $w$ are global weights
-- $\lambda_h$ is the hierarchical regularization weight
-- $\lambda_r$ is the L2 regularization weight
+where $\lambda_h$ penalizes SKU-level deviation and $\lambda_r$ is standard L2 regularization on global weights.
 
-### Model Components
+---
 
-1. **Baseline Layer** - Predicts base sales using time and lagged sales with hierarchical trend and seasonality effects
-   ```math
-   \mathit{baseline} = \sigma(\mathit{intercept}) + (\tanh(w_1) + \tanh(w_1^h)) \cdot \alpha t + (\tanh(w_2) + \tanh(w_2^h)) \cdot \mathit{sales\_lag}
-   ```
+## Layers
 
-2. **Mixed Effect Layer** - Models macroeconomic impacts and ROI multipliers with hierarchical sensitivity
-   ```math
-   \mathit{mixed\_effect} = 1 + \tanh((w_{me} + w_{me}^h) \cdot \mathit{macro})
-   ```
-   ```math
-   \mathit{roi\_mult} = 1 + \tanh((w_{roi} + w_{roi}^h) \cdot \mathit{mixed\_effect})
-   ```
+**Baseline:** Predicts base sales from time trend and lagged sales with hierarchical seasonality effects per SKU
 
-3. **Discount Layer** - Models linear impact of promotional spend with hierarchical sensitivity to different discount types
-   ```math
-   \mathit{uplift} = (\sigma(w_d) + \sigma(w_d^h)) \cdot \mathit{discount}
-   ```
+$$\hat{b} = \sigma(w_0) + \bigl(\tanh(w_1) + \tanh(w_1^h)\bigr) \alpha t + \bigl(\tanh(w_2) + \tanh(w_2^h)\bigr) y_{t-1}$$
 
-4. **Volume Conversion Layer** - Converts sales predictions to volume using independent conversion parameters
-   ```math
-   \mathit{volume} = \sigma(w_v) \cdot \mathit{sales} + \tanh(w_i)
-   ```
+**Mixed Effect:** Computes a macroeconomic scaling factor $m$ and an ROI multiplier $r$ that scales promotional uplift based on macro conditions
 
-### Final Prediction
+$$m = 1 + \tanh\left((w_m + w_m^h)^\top x_{\text{macro}}\right)$$
+
+$$r = 1 + \tanh\left((w_r + w_r^h) \cdot m\right)$$
+
+**Discount:** Computes promotional uplift $u$ as a hierarchically-weighted linear function of discount spend $d$
+
+$$u = \bigl(\sigma(w_d) + \sigma(w_d^h)\bigr) \cdot d$$
+
+**Volume Conversion:** Converts sales predictions to volume using independent conversion parameters
+
+$$v = \sigma(w_v) \hat{y} + \tanh(w_i)$$
+
+---
+
+## Final Prediction
 
 The final sales prediction combines all components:
-```math
-\mathit{sales\_pred} = \mathit{baseline} \cdot \prod(\mathit{mixed\_effect}) + \sum(\mathit{uplift}) \cdot \prod(\mathit{roi\_mult})
-```
 
-### Optimization Engine
+$$\hat{y} = \hat{b} \cdot \prod_j m_j + \sum_j u_j \cdot \prod_j r_j$$
 
-The optimization engine maximizes ROI while respecting business constraints:
+---
 
-```math
-L_{\mathit{opt}} = -(\mathit{nr\_increase}) - \lambda_{roi} \cdot \mathit{roi} + \sum \lambda_c \cdot L_c
-```
+## Optimization Engine
 
-where:
-- $\mathit{nr\_increase}$ is the increase in net revenue
-- $\mathit{roi}$ is the return on investment
-- $L_c$ are constraint losses for:
-  - Brand-level discount limits
-  - Pack-type discount limits
-  - Price segment constraints
-  - Volume variation bounds
-  - Non-negative discounts
+Given a trained model, the optimizer backpropagates through the frozen network to find the discount allocation $d^*$ that minimizes:
 
-The engine uses gradient-based optimization to find the optimal promotional spend allocation that maximizes ROI while satisfying all business constraints.
+$$\mathcal{L}_{\text{opt}} = -\Delta_{\text{NR}} - \lambda_\rho \cdot \rho + \sum_c \lambda_c \mathcal{L}_c$$
+
+where $\Delta_{\text{NR}}$ is the increase in net revenue over baseline, and $\rho$ is defined as:
+
+$$\rho = \frac{\sum \hat{y}_{\text{opt}} - \sum \hat{y}_{\text{init}}}{\sum d + \epsilon}$$
+
+Penalty terms $\mathcal{L}_c$ enforce the following constraints: brand-level discount caps, pack-type limits, price segment bounds, volume variation limits, and non-negativity of discounts.
