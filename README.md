@@ -29,9 +29,9 @@ $$\hat{b} = \sigma(w_0) + \bigl(\tanh(w_1) + \tanh(w_1^h)\bigr) \alpha t + \bigl
 
 **Mixed Effect:** Computes a macroeconomic scaling factor $m$ and an ROI multiplier $r$ that scales promotional uplift based on macro conditions
 
-$$m = 1 + \tanh\left((w_m + w_m^h)^\top x_{\text{macro}}\right)$$
+$$m = 1 + \tanh\left((\tanh(w_m) + \tanh(w_m^h))^\top x_{\text{macro}}\right)$$
 
-$$r = 1 + \tanh\left((w_r + w_r^h) \cdot m\right)$$
+$$r = 1 + \tanh\left((\tanh(w_r) + \tanh(w_r^h)) \cdot m\right)$$
 
 **Discount:** Computes promotional uplift $u$ as a hierarchically-weighted linear function of discount spend $d$
 
